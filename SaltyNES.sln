@@ -1,0 +1,70 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SaltyLib", "SaltyLib", "{CC8FD99A-A28C-4FFD-BED6-CB9F6FE46AEB}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SaltyLib.Shared", "SaltyLib\SaltyLib.Shared\SaltyLib.Shared.vcxitems", "{6B9720ED-C540-4B2E-BFCD-87D5C3845C63}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SaltyLib.Windows", "SaltyLib\SaltyLib.Windows\SaltyLib.Windows.vcxproj", "{10B75E70-996E-43EE-8319-18C068A8928F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SaltyLib.WindowsPhone", "SaltyLib\SaltyLib.WindowsPhone\SaltyLib.WindowsPhone.vcxproj", "{42D02971-BEF1-4D8A-99DF-F5C9E906945F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WinSaltyNES", "WinSaltyNES\WinSaltyNES.vcxproj", "{BC202E05-F8B2-47E2-8A42-FA1220F7336E}"
+EndProject
+Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		SaltyLib\SaltyLib.Shared\SaltyLib.Shared.vcxitems*{10b75e70-996e-43ee-8319-18c068a8928f}*SharedItemsImports = 4
+		SaltyLib\SaltyLib.Shared\SaltyLib.Shared.vcxitems*{42d02971-bef1-4d8a-99df-f5c9e906945f}*SharedItemsImports = 4
+		SaltyLib\SaltyLib.Shared\SaltyLib.Shared.vcxitems*{6b9720ed-c540-4b2e-bfcd-87d5c3845c63}*SharedItemsImports = 9
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM = Debug|ARM
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|ARM = Release|ARM
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{10B75E70-996E-43EE-8319-18C068A8928F}.Debug|ARM.ActiveCfg = Debug|ARM
+		{10B75E70-996E-43EE-8319-18C068A8928F}.Debug|ARM.Build.0 = Debug|ARM
+		{10B75E70-996E-43EE-8319-18C068A8928F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{10B75E70-996E-43EE-8319-18C068A8928F}.Debug|Win32.Build.0 = Debug|Win32
+		{10B75E70-996E-43EE-8319-18C068A8928F}.Debug|x64.ActiveCfg = Debug|x64
+		{10B75E70-996E-43EE-8319-18C068A8928F}.Debug|x64.Build.0 = Debug|x64
+		{10B75E70-996E-43EE-8319-18C068A8928F}.Release|ARM.ActiveCfg = Release|ARM
+		{10B75E70-996E-43EE-8319-18C068A8928F}.Release|ARM.Build.0 = Release|ARM
+		{10B75E70-996E-43EE-8319-18C068A8928F}.Release|Win32.ActiveCfg = Release|Win32
+		{10B75E70-996E-43EE-8319-18C068A8928F}.Release|Win32.Build.0 = Release|Win32
+		{10B75E70-996E-43EE-8319-18C068A8928F}.Release|x64.ActiveCfg = Release|x64
+		{10B75E70-996E-43EE-8319-18C068A8928F}.Release|x64.Build.0 = Release|x64
+		{42D02971-BEF1-4D8A-99DF-F5C9E906945F}.Debug|ARM.ActiveCfg = Debug|ARM
+		{42D02971-BEF1-4D8A-99DF-F5C9E906945F}.Debug|ARM.Build.0 = Debug|ARM
+		{42D02971-BEF1-4D8A-99DF-F5C9E906945F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{42D02971-BEF1-4D8A-99DF-F5C9E906945F}.Debug|Win32.Build.0 = Debug|Win32
+		{42D02971-BEF1-4D8A-99DF-F5C9E906945F}.Debug|x64.ActiveCfg = Debug|Win32
+		{42D02971-BEF1-4D8A-99DF-F5C9E906945F}.Release|ARM.ActiveCfg = Release|ARM
+		{42D02971-BEF1-4D8A-99DF-F5C9E906945F}.Release|ARM.Build.0 = Release|ARM
+		{42D02971-BEF1-4D8A-99DF-F5C9E906945F}.Release|Win32.ActiveCfg = Release|Win32
+		{42D02971-BEF1-4D8A-99DF-F5C9E906945F}.Release|Win32.Build.0 = Release|Win32
+		{42D02971-BEF1-4D8A-99DF-F5C9E906945F}.Release|x64.ActiveCfg = Release|Win32
+		{BC202E05-F8B2-47E2-8A42-FA1220F7336E}.Debug|ARM.ActiveCfg = Debug|Win32
+		{BC202E05-F8B2-47E2-8A42-FA1220F7336E}.Debug|Win32.ActiveCfg = Debug|Win32
+		{BC202E05-F8B2-47E2-8A42-FA1220F7336E}.Debug|Win32.Build.0 = Debug|Win32
+		{BC202E05-F8B2-47E2-8A42-FA1220F7336E}.Debug|x64.ActiveCfg = Debug|Win32
+		{BC202E05-F8B2-47E2-8A42-FA1220F7336E}.Release|ARM.ActiveCfg = Release|Win32
+		{BC202E05-F8B2-47E2-8A42-FA1220F7336E}.Release|Win32.ActiveCfg = Release|Win32
+		{BC202E05-F8B2-47E2-8A42-FA1220F7336E}.Release|Win32.Build.0 = Release|Win32
+		{BC202E05-F8B2-47E2-8A42-FA1220F7336E}.Release|x64.ActiveCfg = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6B9720ED-C540-4B2E-BFCD-87D5C3845C63} = {CC8FD99A-A28C-4FFD-BED6-CB9F6FE46AEB}
+		{10B75E70-996E-43EE-8319-18C068A8928F} = {CC8FD99A-A28C-4FFD-BED6-CB9F6FE46AEB}
+		{42D02971-BEF1-4D8A-99DF-F5C9E906945F} = {CC8FD99A-A28C-4FFD-BED6-CB9F6FE46AEB}
+	EndGlobalSection
+EndGlobal
