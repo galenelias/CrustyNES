@@ -5,6 +5,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SaltyLib.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NESRom.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Cpu6502.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
@@ -12,5 +13,6 @@
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)SaltyLib.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NESRom.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Cpu6502.cpp" />
   </ItemGroup>
 </Project>
