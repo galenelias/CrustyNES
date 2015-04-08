@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <sstream>
+
 
 // CWinSaltyNESDlg dialog
 class CWinSaltyNESDlg : public CDialogEx
@@ -22,6 +24,10 @@ public:
 // Implementation
 protected:
 	HICON m_hIcon;
+
+	CFont m_logBoxFont;
+
+	std::wostringstream m_debugOutput;
 
 	// Generated message map functions
 	virtual BOOL OnInitDialog();

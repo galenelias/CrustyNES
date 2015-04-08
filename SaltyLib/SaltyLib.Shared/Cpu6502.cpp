@@ -2,10 +2,20 @@
 #include "Cpu6502.h"
 
 #include <stdexcept>
+#include <sstream>
+#include <iomanip>
 
 namespace CPU
 {
 
+// BranchFlagSelector
+enum BranchFlagSelector
+{
+	Negative = 0x0,
+	Overflow = 0x1,
+	Carry    = 0x2,
+	Zero     = 0x3,
+};
 
 class InvalidInstruction : public std::runtime_error
 {
@@ -32,23 +42,25 @@ private:
 };
 
 
-
 Cpu6502::Cpu6502(const NES::NESRom& rom)
 {
 	m_prgRom = rom.GetPrgRom();
+
+	// Set ourselves into perpetual v-blank mode:
+	m_ppuStatusReg = static_cast<uint8_t>(PpuStatusFlag::InVBlank);
 }
 
-uint8_t Cpu6502::ReadMemory8(uint16_t offset)
+uint8_t Cpu6502::ReadMemory8(uint16_t offset) const
 {
 	return *MapMemoryOffset(offset);
 }
 
-uint16_t Cpu6502::ReadMemory16(uint16_t offset)
+uint16_t Cpu6502::ReadMemory16(uint16_t offset) const
 {
 	return *reinterpret_cast<const uint16_t*>(MapMemoryOffset(offset));
 }
 
-const byte* Cpu6502::MapMemoryOffset(uint16_t offset)
+const byte* Cpu6502::MapMemoryOffset(uint16_t offset) const
 {
 	if (offset >= 0x8000) // PRG ROM
 	{
@@ -108,63 +120,316 @@ void Cpu6502::WriteMemory8(uint16_t offset, uint8_t val)
 
 void Cpu6502::Reset()
 {
-	// Jump to code offset specified by 
+	// Jump to code offset specified by the RESET thingy
 	m_pc = ReadMemory16(0xFFFC);
+
+	// This doesn't play nice with nestest for some reason, so force execution to start at $C000
+	m_pc = 0xc000;
+}
+
+uint8_t Cpu6502::ReadUInt8(AddressingMode mode, uint8_t instruction)
+{
+	if (mode == AddressingMode::IMM)
+	{
+		return ReadMemory8(m_pc++);
+	}
+	else if (mode == AddressingMode::ABS)
+	{
+		uint16_t readOffset = ReadMemory16(m_pc);
+		m_pc += 2;
+		return ReadMemory8(readOffset);
+	}
+	else if (mode == AddressingMode::ABSX)
+	{
+		uint16_t readOffset = ReadMemory16(m_pc);
+		m_pc += 2;
+		readOffset += m_x;
+		return ReadMemory8(readOffset);
+	}
+	else
+	{
+		throw UnhandledInstruction(instruction);
+	}
+
+}
+
+uint16_t Cpu6502::ReadUInt16(AddressingMode mode, uint8_t instruction)
+{
+	if (mode == AddressingMode::ABS)
+	{
+		uint16_t value = ReadMemory16(m_pc);
+		m_pc += 2;
+		return value;
+	}
+	else if (mode == AddressingMode::ZPX)
+	{
+		uint8_t zpOffset = ReadMemory8(m_pc++);
+		uint8_t memoryOffset = zpOffset + m_x;
+
+		return memoryOffset;
+	}
+	else if (mode == AddressingMode::ZP)
+	{
+		uint8_t zpOffset = ReadMemory8(m_pc++);
+		return static_cast<uint16_t>(zpOffset);
+	}
+
+	else
+	{
+		throw UnhandledInstruction(instruction);
+	}
+}
+
+bool IsNegative(uint8_t val)
+{
+	return ((val & 0x80) != 0);
+}
+
+void Cpu6502::SetStatusFlagsFromValue(uint8_t value)
+{
+	// Set the zero and negative flags of the cpu
+	
+	// Mask off the status bits we're setting, and or in the new status bits
+	CpuStatusFlag newFlags = CpuStatusFlag::None;
+	
+	if (IsNegative(value))
+		newFlags = newFlags | CpuStatusFlag::Negative;
+	else if (value == 0)
+		newFlags = newFlags | CpuStatusFlag::Zero;
+
+	SetStatusFlags(newFlags, (CpuStatusFlag::Negative | CpuStatusFlag::Zero));
+}
+
+void Cpu6502::SetStatusFlags(CpuStatusFlag flags, CpuStatusFlag mask)
+{
+	m_status = (m_status & ~static_cast<uint8_t>(mask)) | static_cast<uint8_t>(flags);
+
+}
+
+static uint8_t AddressingModeFromInstruction(uint8_t instruction)
+{
+	return (instruction & 0x1C) >> 2;
+}
+
+
+static AddressingMode GetClass0AddressingMode(uint8_t instruction)
+{
+	switch (AddressingModeFromInstruction(instruction))
+	{
+		case 0: return AddressingMode::IMM;
+		case 1: return AddressingMode::ZP;
+		case 3: return AddressingMode::ABS;
+		case 5: return AddressingMode::ZPX;
+		case 7: return AddressingMode::ABSX;
+		default: throw InvalidInstruction(instruction);
+	}
+}
+
+static AddressingMode GetClass1AddressingMode(uint8_t instruction)
+{
+	switch (AddressingModeFromInstruction(instruction))
+	{
+		case 0: return AddressingMode::_ZPX_;
+		case 1: return AddressingMode::ZP;
+		case 2: return AddressingMode::IMM;
+		case 3: return AddressingMode::ABS;
+		case 4: return AddressingMode::_ZP_Y;
+		case 5: return AddressingMode::ZPX;
+		case 6: return AddressingMode::ABSY;
+		case 7: return AddressingMode::ABSX;
+		default: throw InvalidInstruction(instruction);
+	}
+}
+
+static AddressingMode GetClass2AddressingMode(uint8_t instruction)
+{
+	switch (AddressingModeFromInstruction(instruction))
+	{
+		case 0: return AddressingMode::IMM;
+		case 1: return AddressingMode::ZP;
+		case 2: return AddressingMode::ACC;
+		case 3: return AddressingMode::ABS;
+		case 5: return AddressingMode::ZPX;
+		case 7: return AddressingMode::ABSX;
+		default: throw InvalidInstruction(instruction);
+	}
+}
+
+
+std::wstring Cpu6502::GetDebugState() const
+{
+	uint8_t instruction = ReadMemory8(m_pc);
+
+	std::wostringstream oss;  // note the 'w'
+
+	oss << std::hex << std::setfill(L'0');
+	oss << std::setw(4) << m_pc << "  ";
+	oss << std::setw(2) << instruction << "  ";
+	oss << L"A:" << std::setw(2) << m_acc << "  ";
+	oss << L"X:" << std::setw(2) << m_x << "  ";
+	oss << L"Y:" << std::setw(2) << m_y << "  ";
+	oss << L"P:" << std::setw(2) << m_status << "  ";
+	oss << L"SP:" << std::setw(2) << m_sp << "  ";
+	//oss << L"SL:" << std::setw(6) << m_status;
+
+	return oss.str();
 }
 
 
 void Cpu6502::RunNextInstruction()
 {
+	// Instruction is of the form aaabbbcc.  See: http://www.llx.com/~nparker/a2/opcodes.html
 	uint8_t instruction = ReadMemory8(m_pc++);
 
-	const OpCode opCode = static_cast<OpCode>((instruction & 0xE0) >> 5);
-	const AddressingMode addressingMode = static_cast<AddressingMode>((instruction & 0x1C) >> 2);
+	// 6502 instructions are split into multiple distinct classes of instructions as indicated by the 'cc' component
+	const uint8_t instructionClass = (instruction & 0x03);
 
-	if ((instruction & 0x03) != 0x01)
-		throw UnhandledInstruction(instruction);
-
-	switch (opCode)
+	if (instructionClass == 0x01)  // REVIEW: Combine into single enum?
 	{
-	case OpCode::LDA:
+		const AddressingMode addressingMode = GetClass1AddressingMode(instruction);
+		const OpCode1 opCode = static_cast<OpCode1>((instruction & 0xE0) >> 5);
 
-		if (addressingMode == AddressingMode::IMM)
+		switch (opCode)
 		{
-			m_accumulator = ReadMemory8(m_pc++);
+		case OpCode1::LDA:
+			m_acc = ReadUInt8(addressingMode, instruction);
+			SetStatusFlagsFromValue(m_acc);
+			break;
+
+		case OpCode1::STA: // Store accumulator
+		{
+			uint16_t writeOffset = ReadUInt16(addressingMode, instruction);
+			WriteMemory8(writeOffset, m_acc);
+			break;
 		}
-		else if (addressingMode == AddressingMode::ABS)
+
+		case OpCode1::CMP: // Compare
 		{
-			uint16_t readOffset = ReadMemory16(m_pc);
-			m_pc += 2;
-			m_accumulator = ReadMemory8(readOffset);
+			// REVIEW: A-M, how to set Carry/Negative flags?
+			const int8_t m = static_cast<int8_t>(ReadUInt8(addressingMode, instruction));
+			const int8_t a = static_cast<int8_t>(m_acc);
+
+			CpuStatusFlag newFlags = CpuStatusFlag::None;
+
+			if (a >= m) // Carry flags
+				newFlags = newFlags | CpuStatusFlag::Carry;
+			if (m == a)
+				newFlags = newFlags | CpuStatusFlag::Zero;
+			if (a - m < 0)
+				newFlags = newFlags | CpuStatusFlag::Negative;
+
+			SetStatusFlags(newFlags, CpuStatusFlag::Carry | CpuStatusFlag::Zero | CpuStatusFlag::Negative);
+		}
+
+		default:
+			throw UnhandledInstruction(instruction);
+		}
+	}
+	else if (instructionClass == 0x00)
+	{
+		// Branch operations
+		if ((instruction & 0x1F) == 0x10)
+		{
+			// Conditional branch, of the form xxy1 0000
+			const int8_t relativeOffset = static_cast<int8_t>(ReadMemory8(m_pc++));
+
+			const BranchFlagSelector flagSelector = static_cast<BranchFlagSelector>(instruction >> 6); // xx
+			bool flagVal;
+			if (flagSelector == BranchFlagSelector::Negative)
+				flagVal = (m_status & static_cast<uint8_t>(CpuStatusFlag::Negative)) != 0;
+			else if (flagSelector == BranchFlagSelector::Overflow)
+				flagVal = (m_status & static_cast<uint8_t>(CpuStatusFlag::Overflow)) != 0;
+			else if (flagSelector == BranchFlagSelector::Carry)
+				flagVal = (m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0;
+			else if (flagSelector == BranchFlagSelector::Zero)
+				flagVal = (m_status & static_cast<uint8_t>(CpuStatusFlag::Zero)) != 0;
+
+			// Expected value is stored in bit 6 of the instruction (y)
+			const bool expectedValue = (instruction & 0x20) != 0;
+			const bool shouldBranch = (flagVal == expectedValue);
+
+			if (shouldBranch)
+			{
+				//m_pc += relativeOffset;
+			}
+		}
+		else if (instruction == static_cast<uint8_t>(SingleByteInstructions::INX))
+		{
+			m_x++;
+			SetStatusFlagsFromValue(m_x); // Doesn't touch overflow
+		}
+		else if (instruction == static_cast<uint8_t>(SingleByteInstructions::INY))
+		{
+			m_y++;
+			SetStatusFlagsFromValue(m_y); // Doesn't touch overflow
+		}
+		else if (instruction == static_cast<uint8_t>(SingleByteInstructions::SEI))
+		{
+			SetStatusFlags(CpuStatusFlag::InterruptDisabled, CpuStatusFlag::InterruptDisabled); // Set Interrupt Disable
+		}
+		else if (instruction == static_cast<uint8_t>(SingleByteInstructions::CLI))
+		{
+			SetStatusFlags(CpuStatusFlag::None, CpuStatusFlag::InterruptDisabled); // Clear Interrupt Disable
+		}
+		else if (instruction == static_cast<uint8_t>(SingleByteInstructions::CLD))
+		{
+			SetStatusFlags(CpuStatusFlag::None, CpuStatusFlag::DecimalMode); // Clear Decimal Mode
 		}
 		else
 		{
-			throw UnhandledInstruction(instruction);
+			const AddressingMode addressingMode = GetClass0AddressingMode(instruction);
+			const OpCode0 opCode = static_cast<OpCode0>((instruction & 0xE0) >> 5);
+
+			switch (opCode)
+			{
+			case OpCode0::JMP:
+				m_pc = ReadUInt16(addressingMode, instruction);
+				break;
+			case OpCode0::STY:
+			{
+				uint16_t writeOffset = ReadUInt16(addressingMode, instruction);
+				WriteMemory8(writeOffset, m_y);
+				break;
+			}
+			default:
+				throw UnhandledInstruction(instruction);
+			}
 		}
-
-		break;
-
-	case OpCode::STA: // Store accumulator
-
-		if (addressingMode == AddressingMode::ABS)
+	}
+	else if (instructionClass == 0x02)
+	{
+		if (instruction == (static_cast<uint8_t>(SingleByteInstructions::TXS)))
 		{
-			uint16_t writeOffset = ReadMemory16(m_pc);
-			m_pc += 2;
-
-			WriteMemory8(writeOffset, m_accumulator);
+			m_sp = m_x;
 		}
 		else
 		{
-			throw UnhandledInstruction(instruction);
+			const AddressingMode addressingMode = GetClass2AddressingMode(instruction);
+			const OpCode2 opCode = static_cast<OpCode2>((instruction & 0xE0) >> 5);
+
+			switch (opCode)
+			{
+			case OpCode2::LDX:
+				m_x = ReadUInt8(addressingMode, instruction);
+				SetStatusFlagsFromValue(m_x);
+				break;
+			case OpCode2::STX:
+			{
+				uint16_t writeOffset = ReadUInt16(addressingMode, instruction);
+				WriteMemory8(writeOffset, m_x);
+				break;
+			}
+			default:
+				throw UnhandledInstruction(instruction);
+			}
 		}
-
-		break;
-
+	}
+	else
+	{
+		throw UnhandledInstruction(instruction);
 	}
 
 }
-
-
 
 
 } // namespace CPU

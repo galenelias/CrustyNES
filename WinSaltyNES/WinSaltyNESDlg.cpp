@@ -129,11 +129,30 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
+	m_logBoxFont.CreateFont(
+		16,                        // nHeight
+		0,                         // nWidth
+		0,                         // nEscapement
+		0,                         // nOrientation
+		FW_NORMAL,                 // nWeight
+		FALSE,                     // bItalic
+		FALSE,                     // bUnderline
+		0,                         // cStrikeOut
+		ANSI_CHARSET,              // nCharSet
+		OUT_DEFAULT_PRECIS,        // nOutPrecision
+		CLIP_DEFAULT_PRECIS,       // nClipPrecision
+		DEFAULT_QUALITY,           // nQuality
+		DEFAULT_PITCH | FF_SWISS,  // nPitchAndFamily
+		L"Courier New");                 // lpszFacename
+
+	GetDlgItem(IDC_EDIT1)->SetFont(&m_logBoxFont);
+
 	// TODO: Add extra initialization here
 	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\LegendOfZelda.nes"));
 	NES::NESRom rom;
 
-	rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes")));
+	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes")));
+	rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\nestest.nes")));
 
 	CPU::Cpu6502 cpu(rom);
 
@@ -141,10 +160,24 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 
 	int instructionsRun = 0;
 
-	for (;;)
+	try
 	{
-		instructionsRun++;
-		cpu.RunNextInstruction();
+		for (;;)
+		{
+			instructionsRun++;
+			std::wstring str = cpu.GetDebugState();
+
+			m_debugOutput << str << "\r\n";
+
+			SetDlgItemTextW(IDC_EDIT1, m_debugOutput.str().c_str());
+
+			cpu.RunNextInstruction();
+		}
+	}
+	catch (std::exception& e)
+	{
+		e;
+		throw;
 	}
 
 
