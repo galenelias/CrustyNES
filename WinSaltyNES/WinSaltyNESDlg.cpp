@@ -152,7 +152,9 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	NES::NESRom rom;
 
 	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes")));
-	rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\nestest.nes")));
+
+	CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\nestest.nes"));
+	rom.LoadRomFromFile(&romFile);
 
 	CPU::Cpu6502 cpu(rom);
 
@@ -165,9 +167,10 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 		for (;;)
 		{
 			instructionsRun++;
-			std::wstring str = cpu.GetDebugState();
+			std::wstring str = cpu.GetDebugState() + L"\r\n";
 
-			m_debugOutput << str << "\r\n";
+			m_debugOutput << str;
+			OutputDebugStringW(str.c_str());
 
 			SetDlgItemTextW(IDC_EDIT1, m_debugOutput.str().c_str());
 

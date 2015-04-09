@@ -122,6 +122,11 @@ void Cpu6502::Reset()
 {
 	// Jump to code offset specified by the RESET thingy
 	m_pc = ReadMemory16(0xFFFC);
+	m_sp = 0xFF;
+
+	// REVIEW: Push something on to stack?  Initial stack pointer should be FD
+	
+	m_status = 0x24; // Set Zero & Overflow
 
 	// This doesn't play nice with nestest for some reason, so force execution to start at $C000
 	m_pc = 0xc000;
@@ -146,6 +151,11 @@ uint8_t Cpu6502::ReadUInt8(AddressingMode mode, uint8_t instruction)
 		readOffset += m_x;
 		return ReadMemory8(readOffset);
 	}
+	else if (mode == AddressingMode::ZP)  // REVIEW: De-dupe with ReadUInt16
+	{
+		uint8_t zpOffset = ReadMemory8(m_pc++);
+		return ReadMemory8(zpOffset);
+	}
 	else
 	{
 		throw UnhandledInstruction(instruction);
@@ -163,9 +173,30 @@ uint16_t Cpu6502::ReadUInt16(AddressingMode mode, uint8_t instruction)
 	}
 	else if (mode == AddressingMode::ZPX)
 	{
+		return ReadMemory16(GetAddressingModeOffset(mode, instruction));
+	}
+	else if (mode == AddressingMode::ZP)
+	{
+		return ReadMemory16(GetAddressingModeOffset(mode, instruction));
+	}
+	else
+	{
+		throw UnhandledInstruction(instruction);
+	}
+}
+
+uint16_t Cpu6502::GetAddressingModeOffset(AddressingMode mode, uint8_t instruction)
+{
+	if (mode == AddressingMode::ABS)
+	{
+		uint16_t value = ReadMemory16(m_pc);
+		m_pc += 2;
+		return value;
+	}
+	else if (mode == AddressingMode::ZPX)
+	{
 		uint8_t zpOffset = ReadMemory8(m_pc++);
 		uint8_t memoryOffset = zpOffset + m_x;
-
 		return memoryOffset;
 	}
 	else if (mode == AddressingMode::ZP)
@@ -173,12 +204,12 @@ uint16_t Cpu6502::ReadUInt16(AddressingMode mode, uint8_t instruction)
 		uint8_t zpOffset = ReadMemory8(m_pc++);
 		return static_cast<uint16_t>(zpOffset);
 	}
-
 	else
 	{
 		throw UnhandledInstruction(instruction);
 	}
 }
+
 
 bool IsNegative(uint8_t val)
 {
@@ -256,6 +287,37 @@ static AddressingMode GetClass2AddressingMode(uint8_t instruction)
 }
 
 
+void Cpu6502::PushValueOntoStack8(uint8_t val)
+{
+	const uint16_t c_stackOffset = 0x100;
+	m_cpuRam[c_stackOffset + m_sp--] = val;
+}
+
+
+void Cpu6502::PushValueOntoStack16(uint16_t val)
+{
+	const uint16_t c_stackOffset = 0x100;
+	PushValueOntoStack8(val >> 8); // Store high word
+	PushValueOntoStack8(static_cast<uint8_t>(val)); // Store high word
+}
+
+
+uint8_t Cpu6502::ReadValueFromStack8()
+{
+	const uint16_t c_stackOffset = 0x100;
+
+	uint8_t result = m_cpuRam[c_stackOffset + (++m_sp)];
+	return result;
+}
+
+uint16_t Cpu6502::ReadValueFromStack16()
+{
+	uint8_t lowWord = ReadValueFromStack8();
+	uint8_t highWord = ReadValueFromStack8();
+	return (highWord << 8) | lowWord;
+}
+
+
 std::wstring Cpu6502::GetDebugState() const
 {
 	uint8_t instruction = ReadMemory8(m_pc);
@@ -298,7 +360,7 @@ void Cpu6502::RunNextInstruction()
 
 		case OpCode1::STA: // Store accumulator
 		{
-			uint16_t writeOffset = ReadUInt16(addressingMode, instruction);
+			uint16_t writeOffset = GetAddressingModeOffset(addressingMode, instruction);
 			WriteMemory8(writeOffset, m_acc);
 			break;
 		}
@@ -319,6 +381,37 @@ void Cpu6502::RunNextInstruction()
 				newFlags = newFlags | CpuStatusFlag::Negative;
 
 			SetStatusFlags(newFlags, CpuStatusFlag::Carry | CpuStatusFlag::Zero | CpuStatusFlag::Negative);
+			break;
+		}
+		case OpCode1::AND: // Logical AND
+		{
+			const uint8_t m = ReadUInt8(addressingMode, instruction);
+			const uint8_t r = m & m_acc;
+			SetStatusFlagsFromValue(r);
+			break;
+		}
+		case OpCode1::ORA: // Logical OR
+		{
+			const uint8_t m = ReadUInt8(addressingMode, instruction);
+			const uint8_t r = m | m_acc;
+			SetStatusFlagsFromValue(r);
+			break;
+		}
+		case OpCode1::EOR: // Logical OR
+		{
+			const uint8_t m = ReadUInt8(addressingMode, instruction);
+			const uint8_t r = m ^ m_acc;
+			SetStatusFlagsFromValue(r);
+			break;
+		}
+		case OpCode1::ADC: // Add with carry
+		{
+			const uint8_t m = ReadUInt8(addressingMode, instruction);
+			const uint8_t r = m + m_acc; // TODO: + Carry
+			m_acc = r;
+			SetStatusFlagsFromValue(r);
+			// TODO: Set carry
+			break;
 		}
 
 		default:
@@ -350,30 +443,74 @@ void Cpu6502::RunNextInstruction()
 
 			if (shouldBranch)
 			{
-				//m_pc += relativeOffset;
+				m_pc += relativeOffset;
 			}
 		}
-		else if (instruction == static_cast<uint8_t>(SingleByteInstructions::INX))
+		else if (instruction == SingleByteInstructions::INX)
 		{
 			m_x++;
 			SetStatusFlagsFromValue(m_x); // Doesn't touch overflow
 		}
-		else if (instruction == static_cast<uint8_t>(SingleByteInstructions::INY))
+		else if (instruction == SingleByteInstructions::INY)
 		{
 			m_y++;
 			SetStatusFlagsFromValue(m_y); // Doesn't touch overflow
 		}
-		else if (instruction == static_cast<uint8_t>(SingleByteInstructions::SEI))
+		else if (instruction == SingleByteInstructions::SEI)
 		{
 			SetStatusFlags(CpuStatusFlag::InterruptDisabled, CpuStatusFlag::InterruptDisabled); // Set Interrupt Disable
 		}
-		else if (instruction == static_cast<uint8_t>(SingleByteInstructions::CLI))
+		else if (instruction == SingleByteInstructions::CLI)
 		{
 			SetStatusFlags(CpuStatusFlag::None, CpuStatusFlag::InterruptDisabled); // Clear Interrupt Disable
 		}
-		else if (instruction == static_cast<uint8_t>(SingleByteInstructions::CLD))
+		else if (instruction == SingleByteInstructions::CLD)
 		{
 			SetStatusFlags(CpuStatusFlag::None, CpuStatusFlag::DecimalMode); // Clear Decimal Mode
+		}
+		else if (instruction == SingleByteInstructions::SED)
+		{
+			SetStatusFlags(CpuStatusFlag::DecimalMode, CpuStatusFlag::DecimalMode); // Set Decimal Mode
+		}
+		else if (instruction == SingleByteInstructions::CLC)
+		{
+			SetStatusFlags(CpuStatusFlag::None, CpuStatusFlag::Carry); // Clear Carry Flag
+		}
+		else if (instruction == SingleByteInstructions::SEC)
+		{
+			SetStatusFlags(CpuStatusFlag::Carry, CpuStatusFlag::Carry); // Set Carry Flag
+		}
+		else if (instruction == SingleByteInstructions::CLV)
+		{
+			SetStatusFlags(CpuStatusFlag::None, CpuStatusFlag::Overflow); // Clear Overflow Flag
+		}
+		else if (instruction == SingleByteInstructions::JSR)
+		{
+			uint16_t jumpAddress = ReadUInt16(AddressingMode::ABS, instruction);
+			PushValueOntoStack16(m_pc - 1);
+			m_pc = jumpAddress;
+		}
+		else if (instruction == SingleByteInstructions::RTS)
+		{
+			uint16_t returnAddress = ReadValueFromStack16() + 1;
+			m_pc = returnAddress;
+		}
+		else if (instruction == SingleByteInstructions::PHP)
+		{
+			PushValueOntoStack8(m_status);
+		}
+		else if (instruction == SingleByteInstructions::PHA)
+		{
+			PushValueOntoStack8(m_acc);
+		}
+		else if (instruction == SingleByteInstructions::PLA)
+		{
+			m_acc = ReadValueFromStack8();
+			SetStatusFlagsFromValue(m_acc);
+		}
+		else if (instruction == SingleByteInstructions::PLP)
+		{
+			m_status = ReadValueFromStack8();
 		}
 		else
 		{
@@ -387,8 +524,23 @@ void Cpu6502::RunNextInstruction()
 				break;
 			case OpCode0::STY:
 			{
-				uint16_t writeOffset = ReadUInt16(addressingMode, instruction);
+				uint16_t writeOffset = GetAddressingModeOffset(addressingMode, instruction);
 				WriteMemory8(writeOffset, m_y);
+				break;
+			}
+			case OpCode0::BIT:
+			{
+				uint8_t val = ReadUInt8(addressingMode, instruction);
+				CpuStatusFlag resultStatusFlags = CpuStatusFlag::None;
+				if ((val & m_acc) == 0)
+					resultStatusFlags |= CpuStatusFlag::Zero;
+
+				if ((val & 0x80) != 0)
+					resultStatusFlags |= CpuStatusFlag::Negative;
+				if ((val & 0x40) != 0)
+					resultStatusFlags |= CpuStatusFlag::Overflow;
+
+				SetStatusFlags(resultStatusFlags, CpuStatusFlag::Zero | CpuStatusFlag::Negative | CpuStatusFlag::Overflow);
 				break;
 			}
 			default:
@@ -398,9 +550,13 @@ void Cpu6502::RunNextInstruction()
 	}
 	else if (instructionClass == 0x02)
 	{
-		if (instruction == (static_cast<uint8_t>(SingleByteInstructions::TXS)))
+		if (instruction == (SingleByteInstructions::TXS))
 		{
 			m_sp = m_x;
+		}
+		else if (instruction == SingleByteInstructions::NOP)
+		{
+			// no-op
 		}
 		else
 		{
@@ -415,7 +571,7 @@ void Cpu6502::RunNextInstruction()
 				break;
 			case OpCode2::STX:
 			{
-				uint16_t writeOffset = ReadUInt16(addressingMode, instruction);
+				uint16_t writeOffset = GetAddressingModeOffset(addressingMode, instruction);
 				WriteMemory8(writeOffset, m_x);
 				break;
 			}

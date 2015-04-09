@@ -14,14 +14,30 @@ enum class SingleByteInstructions
 	INX = 0xE8, // Increment Y
 	CLI = 0x58, // Clear Interrupt Disable
 	SEI = 0x78, // Set Interrupt Disable
+	CLC = 0x18, // Clear Carry Flag
+	SEC = 0x38, // Set Carry Flag
 	CLD = 0xD8, // Clear Decimal Mode
+	SED = 0xF8, // Set Decimal Mode
 	TXA = 0x8A, // Transfer X to Accumulator
 	TXS = 0x9A, // Transfer X to Stack Pointer
 	TAX = 0xAA, // Transfer Accumulator to X
 	TSX = 0xBA, // Transfer Stack Pointer to X
 	DEX = 0xCA, // Decrement X Register
+	JSR = 0x20, // Jump to Subroutine
+	RTS = 0x60, // Return from Subroutine
+	PHP = 0x08, // Push Processor Status
+	PLA = 0x68, // Pull Accumulator
 	NOP = 0xEA, // No operation
+	PHA = 0x48, // Push Accumulator
+	PLP = 0x28, // Pull Process Status
+	CLV = 0xB8, // Clear Overflow
 };
+
+inline bool operator==(uint8_t left, SingleByteInstructions right)
+{
+	return left == static_cast<uint8_t>(right);
+}
+
 
 enum class OpCode0
 {
@@ -58,19 +74,6 @@ enum class OpCode2
 	DEC = 0x6, // 110
 	INC = 0x7, // 111
 };
-
-
-//enum class OpCode00
-//{
-//	ORA = 0x0, // 000
-//	AND = 0x1, // 001
-//	EOR = 0x2, // 010
-//	ADC = 0x3, // 011
-//	STA = 0x4, // 100
-//	LDA = 0x5, // 101
-//	CMP = 0x6, // 110
-//	SBC = 0x7, // 111
-//};
 
 
 enum class AddressingMode
@@ -132,6 +135,11 @@ inline CpuStatusFlag operator|(CpuStatusFlag field1, CpuStatusFlag field2)
 	return static_cast<CpuStatusFlag>(static_cast<uint8_t>(field1) | static_cast<uint8_t>(field2));
 }
 
+inline CpuStatusFlag& operator|=(CpuStatusFlag& field1, CpuStatusFlag field2)
+{
+	field1 = (field1 | field2);
+	return field1;
+}
 
 enum class PpuStatusFlag
 {
@@ -146,12 +154,9 @@ enum class PpuStatusFlag
 };
 
 
-
-
 // Memory Regions
 //  Interrupts ($FFFA-$FFFF)
 //   - $FFFC-$FFFD - RESET
-
 
 class Cpu6502
 {
@@ -164,17 +169,27 @@ public:
 	std::wstring GetDebugState() const;
 
 private:
+	// Read stuff
 	const byte* MapMemoryOffset(uint16_t offset) const;
 	uint8_t ReadMemory8(uint16_t offset) const;
 	uint16_t ReadMemory16(uint16_t offset) const;
 
+	// Addressing mode resolution
+	uint8_t ReadUInt8(AddressingMode mode, uint8_t instruction);
+	uint16_t ReadUInt16(AddressingMode mode, uint8_t instruction);
+	uint16_t GetAddressingModeOffset(AddressingMode mode, uint8_t instruction);
+
+	// Write stuff
 	byte* MapWritableMemoryOffset(uint16_t offset);
 	void WriteMemory8(uint16_t offset, uint8_t val);
 
-	//const byte* ReadMemoryWithAddressingMode(AddressingMode mode)
-	uint8_t ReadUInt8(AddressingMode mode, uint8_t instruction);
-	uint16_t ReadUInt16(AddressingMode mode, uint8_t instruction);
+	// Stack stuff
+	void PushValueOntoStack8(uint8_t val);
+	void PushValueOntoStack16(uint16_t val);
+	uint16_t ReadValueFromStack16();
+	uint8_t ReadValueFromStack8();
 
+	// Status flag
 	void SetStatusFlagsFromValue(uint8_t value);
 	void SetStatusFlags(CpuStatusFlag flags, CpuStatusFlag mask);
 
