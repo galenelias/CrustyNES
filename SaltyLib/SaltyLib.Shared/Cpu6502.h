@@ -4,6 +4,7 @@
 #include <string>
 
 #include "NESRom.h"
+#include "CoreUtils.h"
 
 namespace CPU
 {
@@ -121,25 +122,28 @@ enum class CpuStatusFlag
 	InterruptDisabled = 0x04,
 	DecimalMode = 0x08,
 	BreakCommand = 0x10,
+	Bit5 = 0x20,
 	Overflow = 0x40,
 	Negative = 0x80,
 };
 
-inline CpuStatusFlag operator&(CpuStatusFlag field1, CpuStatusFlag field2)
-{
-	return static_cast<CpuStatusFlag>(static_cast<uint8_t>(field1) & static_cast<uint8_t>(field2));
-}
+DEFINE_ENUM_BITWISE_OPERANDS(CpuStatusFlag);
 
-inline CpuStatusFlag operator|(CpuStatusFlag field1, CpuStatusFlag field2)
-{
-	return static_cast<CpuStatusFlag>(static_cast<uint8_t>(field1) | static_cast<uint8_t>(field2));
-}
+//inline CpuStatusFlag operator&(CpuStatusFlag field1, CpuStatusFlag field2)
+//{
+//	return static_cast<CpuStatusFlag>(static_cast<uint8_t>(field1) & static_cast<uint8_t>(field2));
+//}
+//
+//inline CpuStatusFlag operator|(CpuStatusFlag field1, CpuStatusFlag field2)
+//{
+//	return static_cast<CpuStatusFlag>(static_cast<uint8_t>(field1) | static_cast<uint8_t>(field2));
+//}
 
-inline CpuStatusFlag& operator|=(CpuStatusFlag& field1, CpuStatusFlag field2)
-{
-	field1 = (field1 | field2);
-	return field1;
-}
+//inline CpuStatusFlag& operator|=(CpuStatusFlag& field1, CpuStatusFlag field2)
+//{
+//	field1 = (field1 | field2);
+//	return field1;
+//}
 
 enum class PpuStatusFlag
 {

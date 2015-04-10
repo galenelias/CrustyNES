@@ -6,6 +6,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)SaltyLib.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NESRom.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Cpu6502.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)CoreUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">

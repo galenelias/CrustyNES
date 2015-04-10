@@ -122,11 +122,11 @@ void Cpu6502::Reset()
 {
 	// Jump to code offset specified by the RESET thingy
 	m_pc = ReadMemory16(0xFFFC);
-	m_sp = 0xFF;
+	m_sp = 0xFD; // REVIEW: Figure out why normal NES starts at FD, not FF.  Initial push of status flags?
 
 	// REVIEW: Push something on to stack?  Initial stack pointer should be FD
 	
-	m_status = 0x24; // Set Zero & Overflow
+	m_status = static_cast<uint8_t>(CpuStatusFlag::Bit5 | CpuStatusFlag::InterruptDisabled); // Bit 5 doesn't exist, so pin it in the '1' state.  Not sure why interrupts start disabled
 
 	// This doesn't play nice with nestest for some reason, so force execution to start at $C000
 	m_pc = 0xc000;
@@ -326,12 +326,12 @@ std::wstring Cpu6502::GetDebugState() const
 
 	oss << std::hex << std::setfill(L'0');
 	oss << std::setw(4) << m_pc << "  ";
-	oss << std::setw(2) << instruction << "  ";
+	oss << std::setw(2) << instruction << "   ";
 	oss << L"A:" << std::setw(2) << m_acc << "  ";
 	oss << L"X:" << std::setw(2) << m_x << "  ";
 	oss << L"Y:" << std::setw(2) << m_y << "  ";
 	oss << L"P:" << std::setw(2) << m_status << "  ";
-	oss << L"SP:" << std::setw(2) << m_sp << "  ";
+	oss << L"SP:" << std::setw(2) << m_sp;// << "  ";
 	//oss << L"SL:" << std::setw(6) << m_status;
 
 	return oss.str();
@@ -386,31 +386,42 @@ void Cpu6502::RunNextInstruction()
 		case OpCode1::AND: // Logical AND
 		{
 			const uint8_t m = ReadUInt8(addressingMode, instruction);
-			const uint8_t r = m & m_acc;
-			SetStatusFlagsFromValue(r);
+			m_acc = m & m_acc;
+			SetStatusFlagsFromValue(m_acc);
 			break;
 		}
 		case OpCode1::ORA: // Logical OR
 		{
 			const uint8_t m = ReadUInt8(addressingMode, instruction);
-			const uint8_t r = m | m_acc;
-			SetStatusFlagsFromValue(r);
+			m_acc = m | m_acc;
+			SetStatusFlagsFromValue(m_acc);
 			break;
 		}
 		case OpCode1::EOR: // Logical OR
 		{
 			const uint8_t m = ReadUInt8(addressingMode, instruction);
-			const uint8_t r = m ^ m_acc;
-			SetStatusFlagsFromValue(r);
+			m_acc = m ^ m_acc;
+			SetStatusFlagsFromValue(m_acc);
 			break;
 		}
 		case OpCode1::ADC: // Add with carry
 		{
 			const uint8_t m = ReadUInt8(addressingMode, instruction);
-			const uint8_t r = m + m_acc; // TODO: + Carry
-			m_acc = r;
-			SetStatusFlagsFromValue(r);
+
+			int wideResult = static_cast<int>(m) + static_cast<int>(m_acc) + (((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0) ? 1 : 0);
+			m_acc = m + m_acc + (((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0) ? 1 : 0); // TODO: + Carry
+			SetStatusFlagsFromValue(m_acc);
 			// TODO: Set carry
+			if (wideResult < -128 || wideResult > 127)
+			{
+				// Oh shit, an overflow!
+				SetStatusFlags(CpuStatusFlag::Overflow, CpuStatusFlag::Overflow | CpuStatusFlag::Carry); // For now, just clear them
+			}
+			else
+			{
+				SetStatusFlags(CpuStatusFlag::None, CpuStatusFlag::Overflow | CpuStatusFlag::Carry); // For now, just clear them
+			}
+
 			break;
 		}
 
@@ -495,22 +506,26 @@ void Cpu6502::RunNextInstruction()
 			uint16_t returnAddress = ReadValueFromStack16() + 1;
 			m_pc = returnAddress;
 		}
-		else if (instruction == SingleByteInstructions::PHP)
+		else if (instruction == SingleByteInstructions::PHP) // Push status
 		{
-			PushValueOntoStack8(m_status);
+			// PHP pushes the cpu status with the break status bit set (http://visual6502.org/wiki/index.php?title=6502_BRK_and_B_bit)
+			PushValueOntoStack8(m_status | static_cast<uint8_t>(CpuStatusFlag::BreakCommand));
 		}
-		else if (instruction == SingleByteInstructions::PHA)
+		else if (instruction == SingleByteInstructions::PHA) // Push accumulator
 		{
 			PushValueOntoStack8(m_acc);
 		}
-		else if (instruction == SingleByteInstructions::PLA)
+		else if (instruction == SingleByteInstructions::PLA) // Pull accumulator
 		{
 			m_acc = ReadValueFromStack8();
 			SetStatusFlagsFromValue(m_acc);
 		}
 		else if (instruction == SingleByteInstructions::PLP)
 		{
-			m_status = ReadValueFromStack8();
+			// PLP doesn't set the 'Break' status flag (http://visual6502.org/wiki/index.php?title=6502_BRK_and_B_bit)
+			const uint8_t statusLoadMask = static_cast<uint8_t>(CpuStatusFlag::BreakCommand | CpuStatusFlag::Bit5);
+			const uint8_t statusFromStack = ReadValueFromStack8();
+			m_status = (m_status & statusLoadMask) | (statusFromStack & ~statusLoadMask);
 		}
 		else
 		{
