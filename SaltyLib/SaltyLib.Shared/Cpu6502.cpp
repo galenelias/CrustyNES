@@ -406,21 +406,32 @@ void Cpu6502::RunNextInstruction()
 		}
 		case OpCode1::ADC: // Add with carry
 		{
+			// REVIEW: This whole method is gross
 			const uint8_t m = ReadUInt8(addressingMode, instruction);
+			const int8_t signedM = static_cast<int8_t>(m);
+			const int8_t signedAcc = static_cast<int8_t>(m_acc);
 
-			int wideResult = static_cast<int>(m) + static_cast<int>(m_acc) + (((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0) ? 1 : 0);
+			int wideResult = static_cast<int>(signedM) + static_cast<int>(signedAcc) + (((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0) ? 1 : 0);
+			//int narrowResult = signedM + signedAcc + (((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0) ? 1 : 0);
+
 			m_acc = m + m_acc + (((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0) ? 1 : 0); // TODO: + Carry
 			SetStatusFlagsFromValue(m_acc);
-			// TODO: Set carry
-			if (wideResult < -128 || wideResult > 127)
+			
+			CpuStatusFlag newStatusFlags = CpuStatusFlag::None;
+
+			if (wideResult < -128 || wideResult > 127) // Oh shit, an overflow!
 			{
-				// Oh shit, an overflow!
-				SetStatusFlags(CpuStatusFlag::Overflow, CpuStatusFlag::Overflow | CpuStatusFlag::Carry); // For now, just clear them
+				newStatusFlags |= CpuStatusFlag::Overflow;
 			}
-			else
+
+			// Carry happens if two negative numbers go super negative, or if a negative number and a positive become positive
+			if (wideResult < -128
+				|| ((signedM < 0 || signedAcc < 0) && wideResult >= 0))
 			{
-				SetStatusFlags(CpuStatusFlag::None, CpuStatusFlag::Overflow | CpuStatusFlag::Carry); // For now, just clear them
+				newStatusFlags |= CpuStatusFlag::Carry;
 			}
+
+			SetStatusFlags(newStatusFlags, CpuStatusFlag::Overflow | CpuStatusFlag::Carry);
 
 			break;
 		}
