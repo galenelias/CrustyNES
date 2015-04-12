@@ -32,6 +32,10 @@ enum class SingleByteInstructions
 	PHA = 0x48, // Push Accumulator
 	PLP = 0x28, // Pull Process Status
 	CLV = 0xB8, // Clear Overflow
+	DEY = 0x88, // Decrement Y
+	TAY = 0xA8, // Transfer Accumulator to Y
+	TYA = 0x98, // Transfer Y to Accumulator
+	RTI = 0x40, // Return from Interrupt
 };
 
 inline bool operator==(uint8_t left, SingleByteInstructions right)
@@ -68,7 +72,7 @@ enum class OpCode2
 {
 	ASL = 0x0, // 000
 	ROL = 0x1, // 001
-	LSR = 0x2, // 010
+	LSR = 0x2, // 010 - Logical Shift Right
 	ROR = 0x3, // 011
 	STX = 0x4, // 100
 	LDX = 0x5, // 101
@@ -81,10 +85,11 @@ enum class AddressingMode
 {
 	IMM,   // Immediate
 	ABS,   // Absolute
-	ABSY,  // Absolute, Y
 	ABSX,  // Absolute, X
+	ABSY,  // Absolute, Y
 	ZP,    // Zero Page
 	ZPX,   // Zero Page, X
+	ZPY,   // Zero Page, Y
 	_ZPX_, // (Zero Page, X)
 	_ZP_Y, // (Zero Page), Y
 	ACC,   // Accumulator
@@ -129,22 +134,6 @@ enum class CpuStatusFlag
 
 DEFINE_ENUM_BITWISE_OPERANDS(CpuStatusFlag);
 
-//inline CpuStatusFlag operator&(CpuStatusFlag field1, CpuStatusFlag field2)
-//{
-//	return static_cast<CpuStatusFlag>(static_cast<uint8_t>(field1) & static_cast<uint8_t>(field2));
-//}
-//
-//inline CpuStatusFlag operator|(CpuStatusFlag field1, CpuStatusFlag field2)
-//{
-//	return static_cast<CpuStatusFlag>(static_cast<uint8_t>(field1) | static_cast<uint8_t>(field2));
-//}
-
-//inline CpuStatusFlag& operator|=(CpuStatusFlag& field1, CpuStatusFlag field2)
-//{
-//	field1 = (field1 | field2);
-//	return field1;
-//}
-
 enum class PpuStatusFlag
 {
 	Bit0 = 0x01,
@@ -176,12 +165,18 @@ private:
 	// Read stuff
 	const byte* MapMemoryOffset(uint16_t offset) const;
 	uint8_t ReadMemory8(uint16_t offset) const;
+	uint16_t ReadMemory16(uint8_t /*offset*/) const { throw std::runtime_error("Oh shit"); }
 	uint16_t ReadMemory16(uint16_t offset) const;
 
 	// Addressing mode resolution
+	byte* GetReadWriteAddress(AddressingMode mode, uint8_t instruction);
+
 	uint8_t ReadUInt8(AddressingMode mode, uint8_t instruction);
 	uint16_t ReadUInt16(AddressingMode mode, uint8_t instruction);
 	uint16_t GetAddressingModeOffset(AddressingMode mode, uint8_t instruction);
+
+	uint16_t GetIndexedIndirectOffset();
+	uint16_t GetIndirectIndexedOffset();
 
 	// Write stuff
 	byte* MapWritableMemoryOffset(uint16_t offset);
@@ -196,6 +191,10 @@ private:
 	// Status flag
 	void SetStatusFlagsFromValue(uint8_t value);
 	void SetStatusFlags(CpuStatusFlag flags, CpuStatusFlag mask);
+
+	// Random instruction helpers
+	void CompareValues(uint8_t minuend, uint8_t subtrahend);
+	void AddWithCarry(uint8_t val1, uint8_t val2);
 
 	// REVIEW: Simulate memory bus?
 	byte m_cpuRam[2*1024 /*2KB*/];

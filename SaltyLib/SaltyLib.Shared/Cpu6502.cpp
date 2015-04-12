@@ -121,7 +121,7 @@ void Cpu6502::WriteMemory8(uint16_t offset, uint8_t val)
 void Cpu6502::Reset()
 {
 	// Jump to code offset specified by the RESET thingy
-	m_pc = ReadMemory16(0xFFFC);
+	m_pc = ReadMemory16(static_cast<uint16_t>(0xFFFC));
 	m_sp = 0xFD; // REVIEW: Figure out why normal NES starts at FD, not FF.  Initial push of status flags?
 
 	// REVIEW: Push something on to stack?  Initial stack pointer should be FD
@@ -151,10 +151,43 @@ uint8_t Cpu6502::ReadUInt8(AddressingMode mode, uint8_t instruction)
 		readOffset += m_x;
 		return ReadMemory8(readOffset);
 	}
+	else if (mode == AddressingMode::ABSY)
+	{
+		uint16_t readOffset = ReadMemory16(m_pc);
+		m_pc += 2;
+		readOffset += m_y;
+		return ReadMemory8(readOffset);
+	}
 	else if (mode == AddressingMode::ZP)  // REVIEW: De-dupe with ReadUInt16
 	{
 		uint8_t zpOffset = ReadMemory8(m_pc++);
 		return ReadMemory8(zpOffset);
+	}
+	else if (mode == AddressingMode::ZPX)
+	{
+		uint8_t zpOffset = ReadMemory8(m_pc++);
+		zpOffset += m_x;
+		return ReadMemory8(zpOffset);
+	}
+	else if (mode == AddressingMode::ZPY)
+	{
+		uint8_t zpOffset = ReadMemory8(m_pc++);
+		zpOffset += m_y;
+		return ReadMemory8(zpOffset);
+	}
+	else if (mode == AddressingMode::ACC)
+	{
+		return m_acc;
+	}
+	else if (mode == AddressingMode::_ZPX_)
+	{
+		uint16_t indirectOffset = GetIndexedIndirectOffset();
+		return ReadMemory8(indirectOffset);
+	}
+	else if (mode == AddressingMode::_ZP_Y)
+	{
+		uint16_t indirectOffset = GetIndirectIndexedOffset();
+		return ReadMemory8(indirectOffset);
 	}
 	else
 	{
@@ -162,6 +195,31 @@ uint8_t Cpu6502::ReadUInt8(AddressingMode mode, uint8_t instruction)
 	}
 
 }
+
+uint16_t Cpu6502::GetIndexedIndirectOffset()
+{
+	uint8_t zpOffset = ReadMemory8(m_pc++);
+	zpOffset += m_x;
+
+	// We have to make sure to continue zero page indexing for the 16-bit offset so we wrap at $00FF
+	uint8_t indirectOffsetLow = ReadMemory8(zpOffset++);
+	uint8_t indirectOffsetHigh = ReadMemory8(zpOffset);
+	uint16_t indirectOffset = (indirectOffsetHigh << 8) | indirectOffsetLow;
+	return indirectOffset;
+}
+
+uint16_t Cpu6502::GetIndirectIndexedOffset()
+{
+	uint8_t zpOffset = ReadMemory8(m_pc++);
+
+	// We have to make sure to continue zero page indexing for the 16-bit offset so we wrap at $00FF
+	uint8_t indirectOffsetLow = ReadMemory8(zpOffset++);
+	uint8_t indirectOffsetHigh = ReadMemory8(zpOffset);
+	uint16_t indirectOffset = (indirectOffsetHigh << 8) | indirectOffsetLow;
+	indirectOffset += m_y;
+	return indirectOffset;
+}
+
 
 uint16_t Cpu6502::ReadUInt16(AddressingMode mode, uint8_t instruction)
 {
@@ -185,6 +243,19 @@ uint16_t Cpu6502::ReadUInt16(AddressingMode mode, uint8_t instruction)
 	}
 }
 
+uint8_t* Cpu6502::GetReadWriteAddress(AddressingMode mode, uint8_t instruction)
+{
+	if (mode == AddressingMode::ACC)
+	{
+		return &m_acc;
+	}
+	else
+	{
+		uint16_t memoryOffset = GetAddressingModeOffset(mode, instruction);
+		return MapWritableMemoryOffset(memoryOffset);
+	}
+}
+
 uint16_t Cpu6502::GetAddressingModeOffset(AddressingMode mode, uint8_t instruction)
 {
 	if (mode == AddressingMode::ABS)
@@ -193,16 +264,44 @@ uint16_t Cpu6502::GetAddressingModeOffset(AddressingMode mode, uint8_t instructi
 		m_pc += 2;
 		return value;
 	}
+	else if (mode == AddressingMode::ABSX)
+	{
+		uint16_t value = ReadMemory16(m_pc);
+		m_pc += 2;
+		value += m_x;
+		return value;
+	}
+	else if (mode == AddressingMode::ABSY)
+	{
+		uint16_t value = ReadMemory16(m_pc);
+		m_pc += 2;
+		value += m_y;
+		return value;
+	}
 	else if (mode == AddressingMode::ZPX)
 	{
 		uint8_t zpOffset = ReadMemory8(m_pc++);
 		uint8_t memoryOffset = zpOffset + m_x;
 		return memoryOffset;
 	}
+	else if (mode == AddressingMode::ZPY)
+	{
+		uint8_t zpOffset = ReadMemory8(m_pc++);
+		uint8_t memoryOffset = zpOffset + m_y;
+		return memoryOffset;
+	}
 	else if (mode == AddressingMode::ZP)
 	{
 		uint8_t zpOffset = ReadMemory8(m_pc++);
 		return static_cast<uint16_t>(zpOffset);
+	}
+	else if (mode == AddressingMode::_ZPX_)
+	{
+		return GetIndexedIndirectOffset();
+	}
+	else if (mode == AddressingMode::_ZP_Y)
+	{
+		return GetIndirectIndexedOffset();
 	}
 	else
 	{
@@ -296,7 +395,6 @@ void Cpu6502::PushValueOntoStack8(uint8_t val)
 
 void Cpu6502::PushValueOntoStack16(uint16_t val)
 {
-	const uint16_t c_stackOffset = 0x100;
 	PushValueOntoStack8(val >> 8); // Store high word
 	PushValueOntoStack8(static_cast<uint8_t>(val)); // Store high word
 }
@@ -338,6 +436,59 @@ std::wstring Cpu6502::GetDebugState() const
 }
 
 
+void Cpu6502::CompareValues(uint8_t minuend, uint8_t subtrahend)
+{
+	CpuStatusFlag newFlags = CpuStatusFlag::None;
+
+	if (minuend >= subtrahend) // Carry flags
+		newFlags = newFlags | CpuStatusFlag::Carry;
+	if (minuend == subtrahend)
+		newFlags = newFlags | CpuStatusFlag::Zero;
+	if (((minuend - subtrahend) & 0x80) != 0)
+		newFlags = newFlags | CpuStatusFlag::Negative;
+
+	SetStatusFlags(newFlags, CpuStatusFlag::Carry | CpuStatusFlag::Zero | CpuStatusFlag::Negative);
+}
+
+/*-----------------------------------------------------------------------------
+	Cpu6502::AddWithCarry
+
+	Helper for performing an add with carry.  This is used by both ADC and SBC instructions
+-------------------------------------------------------------------------------*/
+void Cpu6502::AddWithCarry(uint8_t x, uint8_t y)
+{
+	const int8_t signedX = static_cast<int8_t>(x);
+	const int8_t signedY = static_cast<int8_t>(y);
+	const bool isCarryBitSet = ((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0);
+
+	// Check for overflow by performing wide math
+	int wideResult = static_cast<int>(signedX) + static_cast<int>(signedY) + (isCarryBitSet ? 1 : 0);
+
+	// Calculate the actual result by performing 8-bit addition
+	uint8_t result = x + y + (isCarryBitSet ? 1 : 0);
+	SetStatusFlagsFromValue(result);
+	
+	CpuStatusFlag newStatusFlags = CpuStatusFlag::None;
+
+	if (wideResult < -128 || wideResult > 127) // Signed overflow
+		newStatusFlags |= CpuStatusFlag::Overflow;
+	if (IsNegative(result))
+		newStatusFlags |= CpuStatusFlag::Negative;
+	if (result == 0)
+		newStatusFlags |= CpuStatusFlag::Zero;
+
+	if (wideResult < -128 || ((signedX < 0 || signedY < 0) && wideResult >= 0))
+	{
+		// Carry happens if two negative numbers go super negative, or if a negative number and a positive become positive
+		newStatusFlags |= CpuStatusFlag::Carry;
+	}
+
+	SetStatusFlags(newStatusFlags, CpuStatusFlag::Overflow | CpuStatusFlag::Carry | CpuStatusFlag::Negative | CpuStatusFlag::Zero);
+	m_acc = result;
+}
+
+
+
 void Cpu6502::RunNextInstruction()
 {
 	// Instruction is of the form aaabbbcc.  See: http://www.llx.com/~nparker/a2/opcodes.html
@@ -367,20 +518,7 @@ void Cpu6502::RunNextInstruction()
 
 		case OpCode1::CMP: // Compare
 		{
-			// REVIEW: A-M, how to set Carry/Negative flags?
-			const int8_t m = static_cast<int8_t>(ReadUInt8(addressingMode, instruction));
-			const int8_t a = static_cast<int8_t>(m_acc);
-
-			CpuStatusFlag newFlags = CpuStatusFlag::None;
-
-			if (a >= m) // Carry flags
-				newFlags = newFlags | CpuStatusFlag::Carry;
-			if (m == a)
-				newFlags = newFlags | CpuStatusFlag::Zero;
-			if (a - m < 0)
-				newFlags = newFlags | CpuStatusFlag::Negative;
-
-			SetStatusFlags(newFlags, CpuStatusFlag::Carry | CpuStatusFlag::Zero | CpuStatusFlag::Negative);
+			CompareValues(m_acc, ReadUInt8(addressingMode, instruction));
 			break;
 		}
 		case OpCode1::AND: // Logical AND
@@ -406,32 +544,53 @@ void Cpu6502::RunNextInstruction()
 		}
 		case OpCode1::ADC: // Add with carry
 		{
-			// REVIEW: This whole method is gross
 			const uint8_t m = ReadUInt8(addressingMode, instruction);
-			const int8_t signedM = static_cast<int8_t>(m);
-			const int8_t signedAcc = static_cast<int8_t>(m_acc);
+			AddWithCarry(m_acc, m);
 
-			int wideResult = static_cast<int>(signedM) + static_cast<int>(signedAcc) + (((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0) ? 1 : 0);
-			//int narrowResult = signedM + signedAcc + (((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0) ? 1 : 0);
+			break;
+		}
+		case OpCode1::SBC: // Subtract with carry
+		{
+			static bool shouldUsedOnesComplementAddition = true;
 
-			m_acc = m + m_acc + (((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0) ? 1 : 0); // TODO: + Carry
-			SetStatusFlagsFromValue(m_acc);
-			
-			CpuStatusFlag newStatusFlags = CpuStatusFlag::None;
-
-			if (wideResult < -128 || wideResult > 127) // Oh shit, an overflow!
+			if (!shouldUsedOnesComplementAddition)
 			{
-				newStatusFlags |= CpuStatusFlag::Overflow;
-			}
+				// REVIEW: This whole method is also gross
+				const uint8_t m = ReadUInt8(addressingMode, instruction);
+				const int8_t signedM = static_cast<int8_t>(m);
+				const int8_t signedAcc = static_cast<int8_t>(m_acc);
 
-			// Carry happens if two negative numbers go super negative, or if a negative number and a positive become positive
-			if (wideResult < -128
-				|| ((signedM < 0 || signedAcc < 0) && wideResult >= 0))
+				int wideResult = static_cast<int>(signedAcc) - static_cast<int>(signedM) - (((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0) ? 0 : 1);
+				//int narrowResult = signedM + signedAcc + (((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0) ? 1 : 0);
+
+				m_acc = m_acc - m - (((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0) ? 0 : 1); // TODO: + Carry
+				SetStatusFlagsFromValue(m_acc);
+
+				// Borrow (!Carry) happens when the unsigned subtraction would become negative
+				//bool hasBorrow
+				
+				CpuStatusFlag newStatusFlags = CpuStatusFlag::None;
+
+				if (wideResult < -128 || wideResult > 127) // Oh shit, an overflow!
+				{
+					newStatusFlags |= CpuStatusFlag::Overflow;
+				}
+
+				// Carry happens if two negative numbers go super negative, or if a negative number and a positive become positive
+				if (wideResult < -128
+					|| ((signedM < 0 || signedAcc < 0) && wideResult >= 0))
+				{
+					newStatusFlags |= CpuStatusFlag::Carry;
+				}
+
+				SetStatusFlags(newStatusFlags, CpuStatusFlag::Overflow | CpuStatusFlag::Carry);
+			}
+			else
 			{
-				newStatusFlags |= CpuStatusFlag::Carry;
+				// Subtraction can be performed by taking the ones complement of the subtrahend and then performing an add
+				const uint8_t m = ReadUInt8(addressingMode, instruction);
+				AddWithCarry(m_acc, ~m);
 			}
-
-			SetStatusFlags(newStatusFlags, CpuStatusFlag::Overflow | CpuStatusFlag::Carry);
 
 			break;
 		}
@@ -449,7 +608,7 @@ void Cpu6502::RunNextInstruction()
 			const int8_t relativeOffset = static_cast<int8_t>(ReadMemory8(m_pc++));
 
 			const BranchFlagSelector flagSelector = static_cast<BranchFlagSelector>(instruction >> 6); // xx
-			bool flagVal;
+			bool flagVal = false;
 			if (flagSelector == BranchFlagSelector::Negative)
 				flagVal = (m_status & static_cast<uint8_t>(CpuStatusFlag::Negative)) != 0;
 			else if (flagSelector == BranchFlagSelector::Overflow)
@@ -470,13 +629,15 @@ void Cpu6502::RunNextInstruction()
 		}
 		else if (instruction == SingleByteInstructions::INX)
 		{
-			m_x++;
-			SetStatusFlagsFromValue(m_x); // Doesn't touch overflow
+			SetStatusFlagsFromValue(++m_x); // Doesn't touch overflow
 		}
 		else if (instruction == SingleByteInstructions::INY)
 		{
-			m_y++;
-			SetStatusFlagsFromValue(m_y); // Doesn't touch overflow
+			SetStatusFlagsFromValue(++m_y); // Doesn't touch overflow
+		}
+		else if (instruction == SingleByteInstructions::DEY)
+		{
+			SetStatusFlagsFromValue(--m_y); // Doesn't touch overflow
 		}
 		else if (instruction == SingleByteInstructions::SEI)
 		{
@@ -538,6 +699,25 @@ void Cpu6502::RunNextInstruction()
 			const uint8_t statusFromStack = ReadValueFromStack8();
 			m_status = (m_status & statusLoadMask) | (statusFromStack & ~statusLoadMask);
 		}
+		else if (instruction == SingleByteInstructions::TAY)
+		{
+			m_y = m_acc;
+			SetStatusFlagsFromValue(m_y);
+		}
+		else if (instruction == SingleByteInstructions::TYA)
+		{
+			m_acc = m_y;
+			SetStatusFlagsFromValue(m_acc);
+		}
+		else if (instruction == SingleByteInstructions::RTI)
+		{
+			const uint8_t statusLoadMask = static_cast<uint8_t>(CpuStatusFlag::BreakCommand | CpuStatusFlag::Bit5);
+			const uint8_t statusFromStack = ReadValueFromStack8();
+			uint16_t returnAddress = ReadValueFromStack16();
+
+			m_status = (m_status & statusLoadMask) | (statusFromStack & ~statusLoadMask);
+			m_pc = returnAddress;
+		}
 		else
 		{
 			const AddressingMode addressingMode = GetClass0AddressingMode(instruction);
@@ -546,12 +726,42 @@ void Cpu6502::RunNextInstruction()
 			switch (opCode)
 			{
 			case OpCode0::JMP:
+			{
 				m_pc = ReadUInt16(addressingMode, instruction);
 				break;
+			}
+			case OpCode0::JMP_ABS:
+			{
+				// REVIEW: eww, gross
+				// Dealing with the fact that the 16-bit address can't cross pages, so we need some awkward 
+				// modulo math
+				uint16_t jumpAddressIndirect = ReadUInt16(addressingMode, instruction);
+				uint16_t jumpAddress = ReadMemory8(jumpAddressIndirect);
+				jumpAddressIndirect = (jumpAddressIndirect & 0xFF00) | ((jumpAddressIndirect + 1) & 0x00FF);
+				jumpAddress = jumpAddress | (ReadMemory8(jumpAddressIndirect) << 8);
+				m_pc = jumpAddress;
+				break;
+			}
+			case OpCode0::LDY:
+			{
+				m_y = ReadUInt8(addressingMode, instruction);
+				SetStatusFlagsFromValue(m_y);
+				break;
+			}
 			case OpCode0::STY:
 			{
 				uint16_t writeOffset = GetAddressingModeOffset(addressingMode, instruction);
 				WriteMemory8(writeOffset, m_y);
+				break;
+			}
+			case OpCode0::CPX:
+			{
+				CompareValues(m_x, ReadUInt8(addressingMode, instruction));
+				break;
+			}
+			case OpCode0::CPY:
+			{
+				CompareValues(m_y, ReadUInt8(addressingMode, instruction));
 				break;
 			}
 			case OpCode0::BIT:
@@ -580,25 +790,114 @@ void Cpu6502::RunNextInstruction()
 		{
 			m_sp = m_x;
 		}
+		else if (instruction == SingleByteInstructions::DEX)
+		{
+			SetStatusFlagsFromValue(--m_x); // Doesn't touch overflow
+		}
+		else if (instruction == SingleByteInstructions::TAX)
+		{
+			m_x = m_acc;
+			SetStatusFlagsFromValue(m_x);
+		}
+		else if (instruction == SingleByteInstructions::TXA)
+		{
+			m_acc = m_x;
+			SetStatusFlagsFromValue(m_acc);
+		}
+		else if (instruction == SingleByteInstructions::TSX)
+		{
+			m_x = m_sp;
+			SetStatusFlagsFromValue(m_x);
+		}
 		else if (instruction == SingleByteInstructions::NOP)
 		{
 			// no-op
 		}
 		else
 		{
-			const AddressingMode addressingMode = GetClass2AddressingMode(instruction);
+			AddressingMode addressingMode = GetClass2AddressingMode(instruction);
 			const OpCode2 opCode = static_cast<OpCode2>((instruction & 0xE0) >> 5);
 
 			switch (opCode)
 			{
 			case OpCode2::LDX:
+			{
+				if (addressingMode == AddressingMode::ZPX)
+					addressingMode = AddressingMode::ZPY;
+				else if (addressingMode == AddressingMode::ABSX)
+					addressingMode  = AddressingMode::ABSY;
+
 				m_x = ReadUInt8(addressingMode, instruction);
 				SetStatusFlagsFromValue(m_x);
 				break;
+			}
 			case OpCode2::STX:
 			{
+				if (addressingMode == AddressingMode::ZPX)
+					addressingMode = AddressingMode::ZPY;
+
 				uint16_t writeOffset = GetAddressingModeOffset(addressingMode, instruction);
 				WriteMemory8(writeOffset, m_x);
+				break;
+			}
+			case OpCode2::LSR:  // Logical Shift Right
+			{
+				uint8_t& val = *GetReadWriteAddress(addressingMode, instruction);
+				bool oldBit0Set = (val & 0x01) != 0;
+				val >>= 1;
+				SetStatusFlagsFromValue(val);
+				SetStatusFlags(oldBit0Set ? CpuStatusFlag::Carry : CpuStatusFlag::None, CpuStatusFlag::Carry);
+				break;
+			}
+			case OpCode2::ASL: // Arithmetic Shift Left
+			{
+				uint8_t& val = *GetReadWriteAddress(addressingMode, instruction);
+				bool oldBit7Set = (val & 0x80) != 0;
+				val <<= 1;
+				SetStatusFlagsFromValue(val);
+				SetStatusFlags(oldBit7Set ? CpuStatusFlag::Carry : CpuStatusFlag::None, CpuStatusFlag::Carry);
+				break;
+			}
+			case OpCode2::ROR:
+			{
+				uint8_t& val = *GetReadWriteAddress(addressingMode, instruction);
+				bool oldCarrySet = (m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0;
+				bool oldBit0Set = (val & 0x01) != 0;
+				val >>= 1;
+
+				if (oldCarrySet)
+					val |= 0x80;
+
+				SetStatusFlagsFromValue(val);
+				SetStatusFlags(oldBit0Set ? CpuStatusFlag::Carry : CpuStatusFlag::None, CpuStatusFlag::Carry);
+				break;
+			}
+			case OpCode2::ROL:
+			{
+				uint8_t& val = *GetReadWriteAddress(addressingMode, instruction);
+				bool oldCarrySet = (m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0;
+				bool oldBit7Set = (val & 0x80) != 0;
+				val <<= 1;
+
+				if (oldCarrySet)
+					val |= 0x01;
+
+				SetStatusFlagsFromValue(val);
+				SetStatusFlags(oldBit7Set ? CpuStatusFlag::Carry : CpuStatusFlag::None, CpuStatusFlag::Carry);
+				break;
+			}
+			case OpCode2::INC:
+			{
+				uint8_t& val = *GetReadWriteAddress(addressingMode, instruction);
+				++val;
+				SetStatusFlagsFromValue(val);
+				break;
+			}
+			case OpCode2::DEC:
+			{
+				uint8_t& val = *GetReadWriteAddress(addressingMode, instruction);
+				--val;
+				SetStatusFlagsFromValue(val);
 				break;
 			}
 			default:
