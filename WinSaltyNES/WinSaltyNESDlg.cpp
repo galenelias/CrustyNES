@@ -162,25 +162,29 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 
 	int instructionsRun = 0;
 
-	try
+	for (;;)
 	{
-		for (;;)
+		instructionsRun++;
+		std::wstring str = cpu.GetDebugState() + L"\r\n";
+
+		m_debugOutput << str;
+		OutputDebugStringW(str.c_str());
+
+		SetDlgItemTextW(IDC_EDIT1, m_debugOutput.str().c_str());
+
+		try
 		{
-			instructionsRun++;
-			std::wstring str = cpu.GetDebugState() + L"\r\n";
-
-			m_debugOutput << str;
-			OutputDebugStringW(str.c_str());
-
-			SetDlgItemTextW(IDC_EDIT1, m_debugOutput.str().c_str());
-
 			cpu.RunNextInstruction();
 		}
-	}
-	catch (std::exception& e)
-	{
-		e;
-		throw;
+		catch (CPU::InvalidInstruction& /*invalidInstruction*/)
+		{
+			;
+		}
+		catch (std::exception& e)
+		{
+			e;
+			throw;
+		}
 	}
 
 

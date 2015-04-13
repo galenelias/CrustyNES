@@ -17,30 +17,6 @@ enum BranchFlagSelector
 	Zero     = 0x3,
 };
 
-class InvalidInstruction : public std::runtime_error
-{
-public:
-	InvalidInstruction(uint8_t instruction)
-		: m_instruction(instruction)
-		, std::runtime_error("Invalid Opcode")
-	{ }
-
-private:
-	uint8_t m_instruction;
-};
-
-class UnhandledInstruction: public std::runtime_error
-{
-public:
-	UnhandledInstruction(uint8_t instruction)
-		: m_instruction(instruction)
-		, std::runtime_error("Unhandled Opcode")
-	{ }
-
-private:
-	uint8_t m_instruction;
-};
-
 
 Cpu6502::Cpu6502(const NES::NESRom& rom)
 {
@@ -302,6 +278,10 @@ uint16_t Cpu6502::GetAddressingModeOffset(AddressingMode mode, uint8_t instructi
 	else if (mode == AddressingMode::_ZP_Y)
 	{
 		return GetIndirectIndexedOffset();
+	}
+	else if (mode == AddressingMode::IMM)
+	{
+		throw InvalidInstruction(instruction);  // Found in nestest.rom, invalid addressing mode for the given instructions
 	}
 	else
 	{
@@ -725,62 +705,79 @@ void Cpu6502::RunNextInstruction()
 
 			switch (opCode)
 			{
-			case OpCode0::JMP:
-			{
-				m_pc = ReadUInt16(addressingMode, instruction);
-				break;
-			}
-			case OpCode0::JMP_ABS:
-			{
-				// REVIEW: eww, gross
-				// Dealing with the fact that the 16-bit address can't cross pages, so we need some awkward 
-				// modulo math
-				uint16_t jumpAddressIndirect = ReadUInt16(addressingMode, instruction);
-				uint16_t jumpAddress = ReadMemory8(jumpAddressIndirect);
-				jumpAddressIndirect = (jumpAddressIndirect & 0xFF00) | ((jumpAddressIndirect + 1) & 0x00FF);
-				jumpAddress = jumpAddress | (ReadMemory8(jumpAddressIndirect) << 8);
-				m_pc = jumpAddress;
-				break;
-			}
-			case OpCode0::LDY:
-			{
-				m_y = ReadUInt8(addressingMode, instruction);
-				SetStatusFlagsFromValue(m_y);
-				break;
-			}
-			case OpCode0::STY:
-			{
-				uint16_t writeOffset = GetAddressingModeOffset(addressingMode, instruction);
-				WriteMemory8(writeOffset, m_y);
-				break;
-			}
-			case OpCode0::CPX:
-			{
-				CompareValues(m_x, ReadUInt8(addressingMode, instruction));
-				break;
-			}
-			case OpCode0::CPY:
-			{
-				CompareValues(m_y, ReadUInt8(addressingMode, instruction));
-				break;
-			}
-			case OpCode0::BIT:
-			{
-				uint8_t val = ReadUInt8(addressingMode, instruction);
-				CpuStatusFlag resultStatusFlags = CpuStatusFlag::None;
-				if ((val & m_acc) == 0)
-					resultStatusFlags |= CpuStatusFlag::Zero;
+				case OpCode0::JMP:
+				{
+					if (addressingMode == AddressingMode::ABS) // Only absolute is supported, anything else is an invalid instruction
+					{
+						m_pc = ReadUInt16(addressingMode, instruction);
+					}
+					else
+					{
+						HandleInvalidInstruction(addressingMode, instruction);
+					}
+					break;
+				}
+				case OpCode0::JMP_ABS:
+				{
+					if (addressingMode == AddressingMode::ABS) // Only absolute is supported, anything else is an invalid instruction
+					{
+						// REVIEW: eww, gross
+						// Dealing with the fact that the 16-bit address can't cross pages, so we need some awkward 
+						// modulo math
+						uint16_t jumpAddressIndirect = ReadUInt16(addressingMode, instruction);
+						uint16_t jumpAddress = ReadMemory8(jumpAddressIndirect);
+						jumpAddressIndirect = (jumpAddressIndirect & 0xFF00) | ((jumpAddressIndirect + 1) & 0x00FF);
+						jumpAddress = jumpAddress | (ReadMemory8(jumpAddressIndirect) << 8);
+						m_pc = jumpAddress;
+					}
+					else
+					{
+						HandleInvalidInstruction(addressingMode, instruction);
+					}
 
-				if ((val & 0x80) != 0)
-					resultStatusFlags |= CpuStatusFlag::Negative;
-				if ((val & 0x40) != 0)
-					resultStatusFlags |= CpuStatusFlag::Overflow;
+					break;
+				}
+				case OpCode0::LDY:
+				{
+					m_y = ReadUInt8(addressingMode, instruction);
+					SetStatusFlagsFromValue(m_y);
+					break;
+				}
+				case OpCode0::STY:
+				{
+					uint16_t writeOffset = GetAddressingModeOffset(addressingMode, instruction);
+					WriteMemory8(writeOffset, m_y);
+					break;
+				}
+				case OpCode0::CPX:
+				{
+					CompareValues(m_x, ReadUInt8(addressingMode, instruction));
+					break;
+				}
+				case OpCode0::CPY:
+				{
+					CompareValues(m_y, ReadUInt8(addressingMode, instruction));
+					break;
+				}
+				case OpCode0::BIT:
+				{
+					uint8_t val = ReadUInt8(addressingMode, instruction);
+					CpuStatusFlag resultStatusFlags = CpuStatusFlag::None;
+					if ((val & m_acc) == 0)
+						resultStatusFlags |= CpuStatusFlag::Zero;
 
-				SetStatusFlags(resultStatusFlags, CpuStatusFlag::Zero | CpuStatusFlag::Negative | CpuStatusFlag::Overflow);
-				break;
-			}
-			default:
-				throw UnhandledInstruction(instruction);
+					if ((val & 0x80) != 0)
+						resultStatusFlags |= CpuStatusFlag::Negative;
+					if ((val & 0x40) != 0)
+						resultStatusFlags |= CpuStatusFlag::Overflow;
+
+					SetStatusFlags(resultStatusFlags, CpuStatusFlag::Zero | CpuStatusFlag::Negative | CpuStatusFlag::Overflow);
+					break;
+				}
+				default:
+				{
+					HandleInvalidInstruction(addressingMode, instruction);
+				}
 			}
 		}
 	}
@@ -911,6 +908,15 @@ void Cpu6502::RunNextInstruction()
 	}
 
 }
+
+void Cpu6502::HandleInvalidInstruction(AddressingMode addressingMode, uint8_t instruction)
+{
+	// For invalid instructions, fetch via addressing mode, then no-op
+	uint8_t unused = ReadUInt8(addressingMode, instruction);
+	unused;
+	throw InvalidInstruction(instruction);
+}
+
 
 
 } // namespace CPU

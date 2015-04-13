@@ -9,6 +9,31 @@
 namespace CPU
 {
 
+class InvalidInstruction : public std::runtime_error
+{
+public:
+	InvalidInstruction(uint8_t instruction)
+		: m_instruction(instruction)
+		, std::runtime_error("Invalid Opcode")
+	{ }
+
+private:
+	uint8_t m_instruction;
+};
+
+class UnhandledInstruction: public std::runtime_error
+{
+public:
+	UnhandledInstruction(uint8_t instruction)
+		: m_instruction(instruction)
+		, std::runtime_error("Unhandled Opcode")
+	{ }
+
+private:
+	uint8_t m_instruction;
+};
+
+
 enum class SingleByteInstructions
 {
 	INY = 0xC8, // Increment Y
@@ -195,6 +220,8 @@ private:
 	// Random instruction helpers
 	void CompareValues(uint8_t minuend, uint8_t subtrahend);
 	void AddWithCarry(uint8_t val1, uint8_t val2);
+
+	void HandleInvalidInstruction(AddressingMode addressingMode, uint8_t instruction);
 
 	// REVIEW: Simulate memory bus?
 	byte m_cpuRam[2*1024 /*2KB*/];
