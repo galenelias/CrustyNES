@@ -67,6 +67,8 @@ END_MESSAGE_MAP()
 #include "NESRom.h"
 #include "Cpu6502.h"
 
+#include <Shlobj.h>
+
 #include <stdexcept>
 
 class CWin32ReadOnlyFile : public IReadableFile
@@ -162,15 +164,30 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 
 	int instructionsRun = 0;
 
+	PWSTR pwzLocalAppDataPath = nullptr;
+	SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &pwzLocalAppDataPath);
+
+	pwzLocalAppDataPath;
+	std::wstring logFileDirectory = pwzLocalAppDataPath;
+	logFileDirectory += L"\\SaltyNES";
+
+	CreateDirectoryW(logFileDirectory.c_str(), nullptr);
+
+	std::wstring logFilePath = logFileDirectory + L"\\Cpu.log";
+
+	m_debugFileOutput.open(logFilePath.c_str());
+
 	for (;;)
 	{
 		instructionsRun++;
-		std::wstring str = cpu.GetDebugState() + L"\r\n";
+		std::string str = cpu.GetDebugState() + "\n";
 
-		m_debugOutput << str;
-		OutputDebugStringW(str.c_str());
+		m_debugFileOutput.write(str.c_str(), str.size());
 
-		SetDlgItemTextW(IDC_EDIT1, m_debugOutput.str().c_str());
+		//m_debugOutput << str;
+		//OutputDebugStringW(str.c_str());
+
+		//SetDlgItemTextW(IDC_EDIT1, m_debugOutput.str().c_str());
 
 		try
 		{

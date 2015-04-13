@@ -396,23 +396,15 @@ uint16_t Cpu6502::ReadValueFromStack16()
 }
 
 
-std::wstring Cpu6502::GetDebugState() const
+std::string Cpu6502::GetDebugState() const
 {
-	uint8_t instruction = ReadMemory8(m_pc);
+	const uint8_t instruction = ReadMemory8(m_pc);
 
-	std::wostringstream oss;  // note the 'w'
+	char szDebugState[128];
+	sprintf_s(szDebugState, _countof(szDebugState), "%04hX  %02hhX   A:%02hhX  X:%02hhX  Y:%02hhX  P:%02hhX  SP:%02hhX", m_pc, instruction,
+		m_acc, m_x, m_y, m_status, m_sp);
 
-	oss << std::hex << std::setfill(L'0');
-	oss << std::setw(4) << m_pc << "  ";
-	oss << std::setw(2) << instruction << "   ";
-	oss << L"A:" << std::setw(2) << m_acc << "  ";
-	oss << L"X:" << std::setw(2) << m_x << "  ";
-	oss << L"Y:" << std::setw(2) << m_y << "  ";
-	oss << L"P:" << std::setw(2) << m_status << "  ";
-	oss << L"SP:" << std::setw(2) << m_sp;// << "  ";
-	//oss << L"SL:" << std::setw(6) << m_status;
-
-	return oss.str();
+	return std::string(szDebugState);
 }
 
 

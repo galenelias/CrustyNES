@@ -184,7 +184,7 @@ public:
 
 	void RunNextInstruction();
 
-	std::wstring GetDebugState() const;
+	std::string GetDebugState() const;
 
 private:
 	// Read stuff

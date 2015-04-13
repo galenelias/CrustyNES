@@ -17,6 +17,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)CoreUtils.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Cpu6502.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NESRom.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Ppu.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SaltyLib.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)targetver.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
@@ -24,6 +25,7 @@
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)Cpu6502.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NESRom.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Ppu.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SaltyLib.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

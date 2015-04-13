@@ -5,7 +5,7 @@
 #pragma once
 
 #include <sstream>
-
+#include <fstream>
 
 // CWinSaltyNESDlg dialog
 class CWinSaltyNESDlg : public CDialogEx
@@ -27,7 +27,8 @@ protected:
 
 	CFont m_logBoxFont;
 
-	std::wostringstream m_debugOutput;
+	//std::wostringstream m_debugOutput;
+	std::ofstream m_debugFileOutput;
 
 	// Generated message map functions
 	virtual BOOL OnInitDialog();
