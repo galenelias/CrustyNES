@@ -105,7 +105,7 @@ void Cpu6502::Reset()
 	m_status = static_cast<uint8_t>(CpuStatusFlag::Bit5 | CpuStatusFlag::InterruptDisabled); // Bit 5 doesn't exist, so pin it in the '1' state.  Not sure why interrupts start disabled
 
 	// This doesn't play nice with nestest for some reason, so force execution to start at $C000
-	m_pc = 0xc000;
+	//m_pc = 0xc000;
 }
 
 uint8_t Cpu6502::ReadUInt8(AddressingMode mode, uint8_t instruction)
