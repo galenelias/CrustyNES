@@ -75,7 +75,7 @@ byte* Cpu6502::MapWritableMemoryOffset(uint16_t offset)
 	{
 		return &m_ppuCtrlReg2;
 	}
-	//else if (offset == 0x2002)
+	//else if (offset == 0x2002)  //sflksjdflksdjf
 	//{
 	//	return &m_ppuStatusReg;
 	//}
