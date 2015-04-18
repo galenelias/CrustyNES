@@ -7,9 +7,46 @@
 #include "WinSaltyNESDlg.h"
 #include "afxdialogex.h"
 
+#include "NESRom.h"
+#include "Ppu.h"
+#include "Cpu6502.h"
+
+#include <Shlobj.h>
+#include <stdexcept>
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
+
+
+class CWin32ReadOnlyFile : public IReadableFile
+{
+public:
+	CWin32ReadOnlyFile(LPCWSTR wzFileStr)
+		: m_fileName(wzFileStr)
+	{
+		m_hFile = CreateFileW(wzFileStr, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	}
+
+	virtual ~CWin32ReadOnlyFile() override
+	{
+		CloseHandle(m_hFile);
+	}
+
+	virtual void Read(size_t cbRead, _Out_writes_bytes_(cbRead) byte* pBuffer) override
+	{
+		DWORD cbBytesRead = 0;
+		BOOL succeeded = ReadFile(m_hFile, pBuffer, cbRead, &cbBytesRead, nullptr);
+
+		if (!succeeded || cbBytesRead != cbRead)
+			throw std::runtime_error("File Read fatal error");
+	}
+
+private:
+	std::wstring m_fileName;
+	HANDLE m_hFile;
+};
+
 
 
 // CAboutDlg dialog used for App About
@@ -63,41 +100,6 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 END_MESSAGE_MAP()
-
-#include "NESRom.h"
-#include "Cpu6502.h"
-
-#include <Shlobj.h>
-
-#include <stdexcept>
-
-class CWin32ReadOnlyFile : public IReadableFile
-{
-public:
-	CWin32ReadOnlyFile(LPCWSTR wzFileStr)
-		: m_fileName(wzFileStr)
-	{
-		m_hFile = CreateFileW(wzFileStr, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	}
-
-	virtual ~CWin32ReadOnlyFile() override
-	{
-		CloseHandle(m_hFile);
-	}
-
-	virtual void Read(size_t cbRead, _Out_writes_bytes_(cbRead) byte* pBuffer) override
-	{
-		DWORD cbBytesRead = 0;
-		BOOL succeeded = ReadFile(m_hFile, pBuffer, cbRead, &cbBytesRead, nullptr);
-
-		if (!succeeded || cbBytesRead != cbRead)
-			throw std::runtime_error("File Read fatal error");
-	}
-
-private:
-	std::wstring m_fileName;
-	HANDLE m_hFile;
-};
 
 
 // CWinSaltyNESDlg message handlers
@@ -155,10 +157,12 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 
 	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes")));
 
-	CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\nestest.nes"));
+	CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes"));
+	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\nestest.nes"));
 	rom.LoadRomFromFile(&romFile);
 
 	CPU::Cpu6502 cpu(rom);
+	PPU::Ppu ppu();
 
 	cpu.Reset();
 
@@ -177,7 +181,7 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 
 	m_debugFileOutput.open(logFilePath.c_str());
 
-	for (;;)
+	for (;instructionsRun < 100;)
 	{
 		instructionsRun++;
 		std::string str = cpu.GetDebugState() + "\n";
