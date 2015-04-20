@@ -1,31 +1,83 @@
 #pragma once
 
-
 #include <stdint.h>
+
+namespace NES {
+	class NESRom;
+}
+
+namespace CPU {
+	class Cpu6502;
+}
 
 namespace PPU
 {
 
+const int c_displayWidth = 256;
+const int c_displayHeight = 240;
+
+typedef DWORD ppuDisplayBuffer_t[c_displayHeight][c_displayWidth];
+
+enum class PpuStatusFlag
+{
+	Bit0 = 0x01,
+	Bit1 = 0x02,
+	Bit2 = 0x04,
+	Bit3 = 0x08,
+	Bit4 = 0x10,
+	Bit5 = 0x20,
+	Bit6 = 0x40,
+	InVBlank = 0x80,
+};
+
+
+
 class Ppu
 {
 public:
-	Ppu();
-	~Ppu();
+	Ppu(CPU::Cpu6502& cpu);
+
+	Ppu(const Ppu&) = delete;
+	Ppu& operator=(const Ppu&) = delete;
+
+	void MapRomMemory(const NES::NESRom& rom);
+
 
 	bool InVBlank() const { return false; }
 
+	void DoStuff();
+	bool ShouldRender();
+	//void RenderWin32(HDC hdc, const RECT bounds);
+	void RenderToBuffer(ppuDisplayBuffer_t displayBuffer);
+
 	void WriteControlRegister1(uint8_t value); // $2000
 	void WriteControlRegister2(uint8_t value); // $2001
-	uint8_t ReadPpuStatus() const { return m_ppuStatus; }
+	uint8_t ReadPpuStatus();
+	void WriteCpuAddressRegister(uint8_t value);
+	void WriteCpuDataRegister(uint8_t value);   //$2004
+
+	void WriteScrollRegister(uint8_t value);   //$2005
+
+	void WriteOamAddress(uint8_t value);
+
+	void TriggerOamDMA(uint8_t* pData);
+
+	uint8_t ReadCpuDataRegister();
 
 private:
 	uint8_t ReadMemory8(uint16_t offset);
+	void WriteMemory8(uint16_t offset, uint8_t value);
 
 	void SetVBlankStatus(bool inVBlank);
 
-	uint16_t GetBaseNametableOffset()
+	uint16_t GetBaseNametableOffset() const
 	{
 		return 0x2000 + (m_ppuCtrl1 & 0x03) * 0x0400;
+	}
+
+	uint16_t GetPatternTableOffset() const
+	{
+		return 0x1000 * m_ppuCtrlFlags.backgroundPatternTableAddress;
 	}
 
 	struct PpuControlFlags
@@ -48,9 +100,30 @@ private:
 	uint8_t m_ppuCtrl2;
 	uint8_t m_ppuStatus;
 
+	static const int c_totalScanlines = 240;
+	static const int c_pixelsPerScanlines = 340;
+
 	static const uint16_t c_cbVRAM = 16*1024;
 	uint8_t m_vram[c_cbVRAM]; // 16KB of video ram
 	uint8_t m_sprRam[256]; // Sprite RAM
+
+	uint16_t m_cpuPpuAddr = 0;
+	uint16_t m_cpuOamAddr = 0;
+	uint8_t m_ppuAddressWriteParity = 0; // 0 = first write, 1 = second write
+
+	uint8_t m_horizontalScrollOffset = 0;
+	uint8_t m_verticalScrollOffset = 0;
+	uint8_t m_scrollWriteParity = 0; // 0 = first write (horizontal), 1 = second write (vertical)
+
+
+	const uint8_t* m_chrRom;
+
+	int m_ppuClock = 0;
+	int m_scanline = 0;
+	int m_pixel = 0; // offset within scanline
+	bool m_shouldRender = false;
+
+	CPU::Cpu6502& m_cpu;
 };
 
 } // namespace Ppu

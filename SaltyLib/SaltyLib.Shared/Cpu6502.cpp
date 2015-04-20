@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Cpu6502.h"
+#include "Ppu.h"
 
 #include <stdexcept>
 #include <sstream>
@@ -18,79 +19,193 @@ enum BranchFlagSelector
 };
 
 
-Cpu6502::Cpu6502(const NES::NESRom& rom)
+Cpu6502::Cpu6502(PPU::Ppu& ppu)
+	: m_ppu(ppu)
 {
-	m_prgRom = rom.GetPrgRom();
-
 	// Set ourselves into perpetual v-blank mode:
-	m_ppuStatusReg = static_cast<uint8_t>(PpuStatusFlag::InVBlank);
+	//m_ppuStatusReg = static_cast<uint8_t>(PpuStatusFlag::InVBlank);
+}
+
+void Cpu6502::GenerateNonMaskableInterrupt()
+{
+	PushValueOntoStack16(m_pc);
+	PushValueOntoStack8(m_status);
+	m_pc = ReadMemory16(static_cast<uint16_t>(0xFFFA));
+}
+
+
+void Cpu6502::MapRomMemory(const NES::NESRom& rom)
+{
+	m_cbPrgRom = rom.GetCbPrgRom();
+	m_prgRom = rom.GetPrgRom();
+}
+
+uint16_t MapIoRegisterMemoryOffset(uint16_t offset)
+{
+	// $2008 - $4000 are all mapped to $2000-$2007, so adjust our offset
+	return offset & 0x2007;
 }
 
 uint8_t Cpu6502::ReadMemory8(uint16_t offset) const
 {
-	return *MapMemoryOffset(offset);
+	if (offset >= 0x8000) // PRG ROM
+	{
+		// For now, only support NROM mapper NES-NROM-128 and NES-NROM-256 (iNes Mapper 0)
+		if (m_cbPrgRom == 32 * 1024)
+		{
+			return m_prgRom[offset - 0x8000];
+		}
+		else if (m_cbPrgRom == 16 * 1024)
+		{
+			if (offset >= 0xC000)
+				return m_prgRom[offset - 0xC000];
+			else
+				return m_prgRom[offset - 0x8000];
+		}
+	}
+	else if (offset < 0x800) // CPU RAM
+	{
+		return m_cpuRam[offset];
+	}
+	else if (offset >= 0x2000 && offset < 0x4000)
+	{
+		// PPU I/O registeres
+		uint16_t mappedOffset = MapIoRegisterMemoryOffset(offset);
+		if (mappedOffset == 0x2002)
+		{
+			return m_ppu.ReadPpuStatus();
+		}
+		else if (mappedOffset == 0x2005 || mappedOffset == 0x2006)
+		{
+			throw std::runtime_error("Unexpected read of VRAM Address register");
+		}
+		else
+		{
+			throw std::runtime_error("Unexpected read location");
+		}
+	}
+	else if (offset == 0x4016 || offset == 0x4017)
+	{
+		// REVIEW: Control pad... TODO, ignore for now
+		return 0;
+	}
+	else
+	{
+		throw std::runtime_error("Unexpected read location");
+	}
+}
+
+
+void Cpu6502::WriteMemory8(uint16_t offset, uint8_t value)
+{
+	if (offset < 0x800) // CPU RAM
+	{
+		m_cpuRam[offset] = value;
+	}
+	else if (offset >= 0x2000 && offset < 0x4000)
+	{
+		// PPU I/O registeres
+		uint16_t mappedOffset = MapIoRegisterMemoryOffset(offset);
+		if (mappedOffset == 0x2000)
+		{
+			// Talk to PPU, or some memory bus abstraction?
+			m_ppu.WriteControlRegister1(value);
+		}
+		else if (mappedOffset == 0x2001)
+		{
+			m_ppu.WriteControlRegister2(value);
+		}
+		else if (mappedOffset == 0x2002)
+		{
+			throw std::runtime_error("Unexpected read from PPU status register");
+		}
+		else if (mappedOffset == 0x2003)
+		{
+			m_ppu.WriteOamAddress(value);
+		}
+		else if (mappedOffset == 0x2005)
+		{
+			m_ppu.WriteScrollRegister(value);
+		}
+		else if (mappedOffset == 0x2006)
+		{
+			m_ppu.WriteCpuAddressRegister(value);
+		}
+		else if (mappedOffset == 0x2007)
+		{
+			m_ppu.WriteCpuDataRegister(value);
+		}
+		else
+		{
+			throw std::runtime_error("Not handled yet");
+		}
+	}
+	else if (offset >= 0x4000 && offset < 0x4014)
+	{
+		// APU - ignore for now
+	}
+	else if (offset == 0x4014)
+	{
+		// PPU sprite DMA (OAMDMA)
+
+		uint16_t baseOffset = static_cast<uint16_t>(value) << 8;
+		if (baseOffset < 0x800) // CPU RAM
+		{
+			m_ppu.TriggerOamDMA(m_cpuRam + baseOffset);
+		}
+		else
+		{
+			// REVIEW: Get real contiguous byte*?
+			uint16_t baseOffset = static_cast<uint16_t>(value) << 8;
+			uint8_t dmaData[256];
+			for (uint16_t i=0; i != 256; ++i)
+			{
+				dmaData[i] = ReadMemory8(baseOffset + i);
+			}
+
+			m_ppu.TriggerOamDMA(dmaData);
+		}
+	}
+	else if (offset == 0x4015)
+	{
+		// pAPU Sound / Vertical Clock Signal Register
+		// Ignore for now
+	}
+	else if (offset == 0x4016 || offset == 0x4017)
+	{
+		// REVIEW: Control pad... TODO, ignore for now
+	}
+	else
+	{
+		throw std::runtime_error("Not handled yet");
+	}
+
+	//byte* pWritableMemory = MapWritableMemoryOffset(offset);
+	//*pWritableMemory = val;
 }
 
 uint16_t Cpu6502::ReadMemory16(uint16_t offset) const
 {
-	return *reinterpret_cast<const uint16_t*>(MapMemoryOffset(offset));
-}
+	const uint16_t lowByte = ReadMemory8(offset);
+	const uint16_t highByte = ReadMemory8(offset+1);
 
-const byte* Cpu6502::MapMemoryOffset(uint16_t offset) const
-{
-	if (offset >= 0x8000) // PRG ROM
-	{
-		// For now, only support NROM mapper NES-NROM-128 (iNes Mapper 0)
-		if (offset >= 0xC000)
-			return m_prgRom + (offset - 0xC000);
-		else
-			return m_prgRom + (offset - 0x8000);
-	}
-	else if (offset < 0x800) // CPU RAM
-	{
-		return m_cpuRam + offset;
-	}
-	else if (offset == 0x2002)
-	{
-		return &m_ppuStatusReg;
-	}
-	else
-	{
-		return nullptr;
-	}
+	return (highByte << 8) | lowByte;
 }
 
 
 byte* Cpu6502::MapWritableMemoryOffset(uint16_t offset)
 {
+	// This function only supports non memory mapped values
+
 	if (offset < 0x800) // CPU RAM
 	{
 		return m_cpuRam + offset;
 	}
-	else if (offset == 0x2000)
-	{
-		return &m_ppuCtrlReg1;
-	}
-	else if (offset == 0x2001)
-	{
-		return &m_ppuCtrlReg2;
-	}
-	//else if (offset == 0x2002)  //sflksjdflksdjf
-	//{
-	//	return &m_ppuStatusReg;
-	//}
 	else
 	{
 		return nullptr;
 	}
 
-}
-
-
-void Cpu6502::WriteMemory8(uint16_t offset, uint8_t val)
-{
-	byte* pWritableMemory = MapWritableMemoryOffset(offset);
-	*pWritableMemory = val;
 }
 
 

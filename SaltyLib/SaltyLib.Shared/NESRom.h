@@ -24,14 +24,14 @@ public:
 	void LoadFromFile(IReadableFile* pRomFile);
 
 	bool UseTrainer() const { return (m_Flags6 & 0x04) != 0; }
-	uint32_t CbPrgRomData() { return m_cbPRGRom * 16 * 1024; }
-	uint32_t CbChrRomData() { return m_cbCHRRom * 8 * 1024; }
+	uint16_t CbPrgRomData() const { return m_cbPRGRom * 16 * 1024; }
+	uint16_t CbChrRomData() const { return m_cbCHRRom * 8 * 1024; }
 
 	byte MapperNumber() { return ((m_Flags6 & 0xF0) >> 4) | (m_Flags7 & 0x0f); }
 
 private:
-	uint32_t m_cbPRGRom;
-	uint32_t m_cbCHRRom;
+	uint8_t m_cbPRGRom;
+	uint8_t m_cbCHRRom;
 	byte m_Flags6;
 	byte m_Flags7;
 	uint32_t m_cbPRGRam;
@@ -55,7 +55,12 @@ public:
 
 	void LoadRomFromFile(IReadableFile* pRomFile);
 
+	uint16_t GetCbPrgRom() const;
 	const byte* GetPrgRom() const;
+
+	bool HasChrRom() const;
+	const byte* GetChrRom() const;
+	uint16_t CbChrRomData() const { return m_header.CbChrRomData(); }
 
 private:
 	NESROMHeader m_header;

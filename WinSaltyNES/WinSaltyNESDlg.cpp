@@ -99,6 +99,7 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
+	ON_BN_CLICKED(IDC_BUTTON1, &CWinSaltyNESDlg::OnBnClickedButton1)
 END_MESSAGE_MAP()
 
 
@@ -133,40 +134,33 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-	m_logBoxFont.CreateFont(
-		16,                        // nHeight
-		0,                         // nWidth
-		0,                         // nEscapement
-		0,                         // nOrientation
-		FW_NORMAL,                 // nWeight
-		FALSE,                     // bItalic
-		FALSE,                     // bUnderline
-		0,                         // cStrikeOut
-		ANSI_CHARSET,              // nCharSet
-		OUT_DEFAULT_PRECIS,        // nOutPrecision
-		CLIP_DEFAULT_PRECIS,       // nClipPrecision
-		DEFAULT_QUALITY,           // nQuality
-		DEFAULT_PITCH | FF_SWISS,  // nPitchAndFamily
-		L"Courier New");                 // lpszFacename
-
-	GetDlgItem(IDC_EDIT1)->SetFont(&m_logBoxFont);
+	//m_logBoxFont.CreateFont(
+	//	16,                        // nHeight
+	//	0,                         // nWidth
+	//	0,                         // nEscapement
+	//	0,                         // nOrientation
+	//	FW_NORMAL,                 // nWeight
+	//	FALSE,                     // bItalic
+	//	FALSE,                     // bUnderline
+	//	0,                         // cStrikeOut
+	//	ANSI_CHARSET,              // nCharSet
+	//	OUT_DEFAULT_PRECIS,        // nOutPrecision
+	//	CLIP_DEFAULT_PRECIS,       // nClipPrecision
+	//	DEFAULT_QUALITY,           // nQuality
+	//	DEFAULT_PITCH | FF_SWISS,  // nPitchAndFamily
+	//	L"Courier New");                 // lpszFacename
 
 	// TODO: Add extra initialization here
 	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\LegendOfZelda.nes"));
-	NES::NESRom rom;
 
 	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes")));
 
-	CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes"));
+	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes"));
+	CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Joust (Japan).nes"));
 	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\nestest.nes"));
-	rom.LoadRomFromFile(&romFile);
 
-	CPU::Cpu6502 cpu(rom);
-	PPU::Ppu ppu();
-
-	cpu.Reset();
-
-	int instructionsRun = 0;
+	m_nes.LoadRomFile(&romFile);
+	m_nes.Reset();
 
 	PWSTR pwzLocalAppDataPath = nullptr;
 	SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &pwzLocalAppDataPath);
@@ -181,41 +175,12 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 
 	m_debugFileOutput.open(logFilePath.c_str());
 
-	for (;instructionsRun < 100;)
-	{
-		instructionsRun++;
-		std::string str = cpu.GetDebugState() + "\n";
-
-		m_debugFileOutput.write(str.c_str(), str.size());
-
-		//m_debugOutput << str;
-		//OutputDebugStringW(str.c_str());
-
-		//SetDlgItemTextW(IDC_EDIT1, m_debugOutput.str().c_str());
-
-		try
-		{
-			cpu.RunNextInstruction();
-		}
-		catch (CPU::InvalidInstruction& /*invalidInstruction*/)
-		{
-			;
-		}
-		catch (std::exception& e)
-		{
-			e;
-			throw;
-		}
-	}
-
-
 	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Mike Tyson's Punch-Out!!.nes")));
 	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Dr. Mario.nes")));
 	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\MegaMan.nes")));
 	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\LegendOfZelda.nes")));
 	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\BubbleBobble.nes")));
 	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Contra.nes")));
-
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -269,3 +234,49 @@ HCURSOR CWinSaltyNESDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+
+
+void CWinSaltyNESDlg::OnBnClickedButton1()
+{
+	for (int instructionsRun = 0;instructionsRun < 20000; instructionsRun++)
+	{
+		std::string str = m_nes.GetCpu().GetDebugState() + "\n";
+
+		m_debugFileOutput.write(str.c_str(), str.size());
+
+		m_nes.RunCycle();
+
+		if (m_nes.GetPpu().ShouldRender())
+		{
+			RECT clientRect;
+			GetClientRect(&clientRect);
+			CClientDC dc(this);
+
+			PPU::ppuDisplayBuffer_t screenPixels;
+
+			m_nes.GetPpu().RenderToBuffer(screenPixels);
+
+			for (int iRow = 0; iRow != PPU::c_displayHeight; ++iRow)
+			{
+				for (int iColumn=0; iColumn != PPU::c_displayWidth; ++iColumn)
+				{
+					const COLORREF color = screenPixels[iRow][iColumn];
+					SetPixel(dc.GetSafeHdc(), iColumn*2 + 0, iRow*2 + 0, color);
+					SetPixel(dc.GetSafeHdc(), iColumn*2 + 1, iRow*2 + 0, color);
+					SetPixel(dc.GetSafeHdc(), iColumn*2 + 0, iRow*2 + 1, color);
+					SetPixel(dc.GetSafeHdc(), iColumn*2 + 1, iRow*2 + 1, color);
+				}
+			}
+		}
+	}
+
+	m_debugFileOutput.flush();
+
+	auto cyclesString = std::to_wstring(m_nes.GetCyclesRanSoFar());
+	SetDlgItemTextW(IDC_CYCLES_DISPLAY, cyclesString.c_str());
+
+	wchar_t wzProgramCounter[32];
+	swprintf_s(wzProgramCounter, _countof(wzProgramCounter),L"%04hX", m_nes.GetCpu().GetProgramCounter());
+	SetDlgItemTextW(IDC_PROGRAM_COUNTER, wzProgramCounter);
+
+}

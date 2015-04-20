@@ -6,6 +6,11 @@
 #include "NESRom.h"
 #include "CoreUtils.h"
 
+namespace PPU
+{
+	class Ppu;
+}
+
 namespace CPU
 {
 
@@ -159,18 +164,6 @@ enum class CpuStatusFlag
 
 DEFINE_ENUM_BITWISE_OPERANDS(CpuStatusFlag);
 
-enum class PpuStatusFlag
-{
-	Bit0 = 0x01,
-	Bit1 = 0x02,
-	Bit2 = 0x04,
-	Bit3 = 0x08,
-	Bit4 = 0x10,
-	Bit5 = 0x20,
-	Bit6 = 0x40,
-	InVBlank = 0x80,
-};
-
 
 // Memory Regions
 //  Interrupts ($FFFA-$FFFF)
@@ -179,16 +172,24 @@ enum class PpuStatusFlag
 class Cpu6502
 {
 public:
-	Cpu6502(const NES::NESRom& rom); //REVIEW: Should cpu depend on ram, or abstract the PRG/CHR loading?
+	Cpu6502(PPU::Ppu& ppu); //REVIEW: Should cpu depend on ram, or abstract the PRG/CHR loading?
+	Cpu6502(const Cpu6502&) = delete;
+	Cpu6502& operator=(const Cpu6502&) = delete;
+
 	void Reset();
+
+	void MapRomMemory(const NES::NESRom& rom);
 
 	void RunNextInstruction();
 
 	std::string GetDebugState() const;
 
+	uint16_t GetProgramCounter() const { return m_pc; }
+
+	void GenerateNonMaskableInterrupt();
+
 private:
 	// Read stuff
-	const byte* MapMemoryOffset(uint16_t offset) const;
 	uint8_t ReadMemory8(uint16_t offset) const;
 	uint16_t ReadMemory16(uint8_t /*offset*/) const { throw std::runtime_error("Oh shit"); }
 	uint16_t ReadMemory16(uint16_t offset) const;
@@ -226,6 +227,9 @@ private:
 	// REVIEW: Simulate memory bus?
 	byte m_cpuRam[2*1024 /*2KB*/];
 	const byte *m_prgRom;
+	uint16_t m_cbPrgRom;
+
+	PPU::Ppu& m_ppu;
 
 	// PPU stuff
 	uint8_t m_ppuCtrlReg1;

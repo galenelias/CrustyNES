@@ -71,7 +71,10 @@ void NESRom::LoadRomFromFile(IReadableFile* pRomFile)
 	if (m_header.UseTrainer())
 		throw UnsupportedRomException("Not Supported: Trainers");
 
-	//const byte mapperNum = m_header.MapperNumber();
+	const byte mapperNum = m_header.MapperNumber();
+
+	if (mapperNum != 0)
+		throw UnsupportedRomException("Unsupported Mapper");
 
 	const auto cbPrgRomData = m_header.CbPrgRomData();
 	m_prgRomData = std::make_unique<byte[]>(cbPrgRomData);
@@ -87,9 +90,24 @@ void NESRom::LoadRomFromFile(IReadableFile* pRomFile)
 }
 
 
+uint16_t NESRom::GetCbPrgRom() const
+{
+	return m_header.CbPrgRomData();
+}
+
 const byte* NESRom::GetPrgRom() const
 {
 	return m_prgRomData.get();
+}
+
+bool NESRom::HasChrRom() const
+{
+	return m_chrRomData != nullptr;
+}
+
+const byte* NESRom::GetChrRom() const
+{
+	return m_chrRomData.get();
 }
 
 

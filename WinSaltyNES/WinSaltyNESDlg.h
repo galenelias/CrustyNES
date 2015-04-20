@@ -7,6 +7,8 @@
 #include <sstream>
 #include <fstream>
 
+#include "NES.h"
+
 // CWinSaltyNESDlg dialog
 class CWinSaltyNESDlg : public CDialogEx
 {
@@ -36,4 +38,10 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
+public:
+	afx_msg void OnBnClickedButton1();
+
+
+private:
+	NES::NES m_nes;
 };
