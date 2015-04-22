@@ -175,20 +175,20 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 					const int colorIndex = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
 					                       + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
 				
-					COLORREF color = RGB(255,0,255);
+					COLORREF color = PPU_RGB(255,0,255);
 					switch (colorIndex)
 					{
 					case 0:
-						color = RGB(0,0,0);
+						color = PPU_RGB(0,0,0);
 						break;
 					case 1:
-						color = RGB(255,0,0);
+						color = PPU_RGB(255,0,0);
 						break;
 					case 2:
-						color = RGB(0,255,0);
+						color = PPU_RGB(0,255,0);
 						break;
 					case 3:
-						color = RGB(0,0,255);
+						color = PPU_RGB(0,0,255);
 						break;
 					}
 

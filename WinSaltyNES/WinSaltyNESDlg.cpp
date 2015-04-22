@@ -153,9 +153,9 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	// TODO: Add extra initialization here
 	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\LegendOfZelda.nes"));
 
-	CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes"));
+	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes"));
 
-	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes"));
+	CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes"));
 	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Joust (Japan).nes"));
 	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\nestest.nes"));
 

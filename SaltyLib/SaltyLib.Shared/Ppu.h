@@ -2,6 +2,9 @@
 
 #include <stdint.h>
 
+// Right now, our pixel output is stored with blue as the least significant value, so we can't use Window's default RGB macro
+#define PPU_RGB(r,g,b)          ((COLORREF)(((BYTE)(b)|((WORD)((BYTE)(g))<<8))|(((DWORD)(BYTE)(r))<<16)))
+
 namespace NES {
 	class NESRom;
 }
