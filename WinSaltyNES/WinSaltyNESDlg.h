@@ -29,8 +29,14 @@ protected:
 
 	CFont m_logBoxFont;
 
+	CBitmap m_nesRenderBitmap;
+	BITMAPINFO m_nesRenderBitmapInfo;
+
 	//std::wostringstream m_debugOutput;
 	std::ofstream m_debugFileOutput;
+
+	void SetupRenderBitmap();
+
 
 	// Generated message map functions
 	virtual BOOL OnInitDialog();

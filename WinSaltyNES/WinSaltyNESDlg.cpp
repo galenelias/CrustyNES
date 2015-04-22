@@ -153,10 +153,10 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	// TODO: Add extra initialization here
 	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\LegendOfZelda.nes"));
 
-	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes")));
+	CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes"));
 
-	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes"));
-	CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Joust (Japan).nes"));
+	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes"));
+	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Joust (Japan).nes"));
 	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\nestest.nes"));
 
 	m_nes.LoadRomFile(&romFile);
@@ -175,6 +175,8 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 
 	m_debugFileOutput.open(logFilePath.c_str());
 
+	SetupRenderBitmap();
+
 	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Mike Tyson's Punch-Out!!.nes")));
 	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Dr. Mario.nes")));
 	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\MegaMan.nes")));
@@ -183,6 +185,40 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Contra.nes")));
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
+}
+
+void CWinSaltyNESDlg::SetupRenderBitmap()
+{
+	CClientDC clientDC(this);
+	m_nesRenderBitmap.CreateCompatibleBitmap(&clientDC, PPU::c_displayWidth, PPU::c_displayHeight);
+
+	// Setup bitmap render info
+	memset(&m_nesRenderBitmapInfo.bmiHeader, 0, sizeof(m_nesRenderBitmapInfo.bmiHeader));
+	m_nesRenderBitmapInfo.bmiHeader.biSize = sizeof(m_nesRenderBitmapInfo.bmiHeader);
+	m_nesRenderBitmapInfo.bmiHeader.biWidth = PPU::c_displayWidth;
+	m_nesRenderBitmapInfo.bmiHeader.biHeight = -PPU::c_displayHeight;;
+	m_nesRenderBitmapInfo.bmiHeader.biPlanes = 1;
+	m_nesRenderBitmapInfo.bmiHeader.biBitCount = 32;
+	m_nesRenderBitmapInfo.bmiHeader.biCompression = BI_RGB;
+	memset(&m_nesRenderBitmapInfo.bmiColors, 0, sizeof(RGBQUAD));
+
+	const int c_bytesPerPixel = 4;
+	DWORD bitmapData[PPU::c_displayWidth * PPU::c_displayHeight];
+
+	for (int iRow=0; iRow != PPU::c_displayHeight; ++iRow)
+	{
+		for (int iColumn=0; iColumn != PPU::c_displayWidth; ++iColumn)
+		{
+			const int colorIndex = iRow * PPU::c_displayWidth + iColumn;
+			//spBitmapData[colorIndex * c_bytesPerPixel + 0] = iRow % 255;// RGB(iRow % 255, iColumn % 255, (iRow + iColumn) % 255);
+			//spBitmapData[colorIndex * c_bytesPerPixel + 1] = iColumn % 255;// RGB(iRow % 255, iColumn % 255, (iRow + iColumn) % 255);
+			//spBitmapData[colorIndex * c_bytesPerPixel + 2] = (iRow + iColumn) % 255;// RGB(iRow % 255, iColumn % 255, (iRow + iColumn) % 255);
+
+			bitmapData[colorIndex] = RGB(iRow % 255, iColumn % 255, (iRow + iColumn) % 255);
+		}
+	}
+	::SetDIBits(clientDC.GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, bitmapData, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
+
 }
 
 void CWinSaltyNESDlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -238,11 +274,10 @@ HCURSOR CWinSaltyNESDlg::OnQueryDragIcon()
 
 void CWinSaltyNESDlg::OnBnClickedButton1()
 {
-	for (int instructionsRun = 0;instructionsRun < 20000; instructionsRun++)
+	for (int instructionsRun = 0;instructionsRun < 50000; instructionsRun++)
 	{
-		std::string str = m_nes.GetCpu().GetDebugState() + "\n";
-
-		m_debugFileOutput.write(str.c_str(), str.size());
+		//std::string str = m_nes.GetCpu().GetDebugState() + "\n";
+		//m_debugFileOutput.write(str.c_str(), str.size());
 
 		m_nes.RunCycle();
 
@@ -250,23 +285,34 @@ void CWinSaltyNESDlg::OnBnClickedButton1()
 		{
 			RECT clientRect;
 			GetClientRect(&clientRect);
-			CClientDC dc(this);
+			CClientDC clientDC(this);
 
 			PPU::ppuDisplayBuffer_t screenPixels;
 
 			m_nes.GetPpu().RenderToBuffer(screenPixels);
 
+			/*
 			for (int iRow = 0; iRow != PPU::c_displayHeight; ++iRow)
 			{
 				for (int iColumn=0; iColumn != PPU::c_displayWidth; ++iColumn)
 				{
 					const COLORREF color = screenPixels[iRow][iColumn];
-					SetPixel(dc.GetSafeHdc(), iColumn*2 + 0, iRow*2 + 0, color);
-					SetPixel(dc.GetSafeHdc(), iColumn*2 + 1, iRow*2 + 0, color);
-					SetPixel(dc.GetSafeHdc(), iColumn*2 + 0, iRow*2 + 1, color);
-					SetPixel(dc.GetSafeHdc(), iColumn*2 + 1, iRow*2 + 1, color);
+					SetPixel(clientDC.GetSafeHdc(), iColumn*2 + 0, iRow*2 + 0, color);
+					SetPixel(clientDC.GetSafeHdc(), iColumn*2 + 1, iRow*2 + 0, color);
+					SetPixel(clientDC.GetSafeHdc(), iColumn*2 + 0, iRow*2 + 1, color);
+					SetPixel(clientDC.GetSafeHdc(), iColumn*2 + 1, iRow*2 + 1, color);
 				}
 			}
+			/*/
+
+			::SetDIBits(clientDC.GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, screenPixels, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
+
+			CDC memDC;
+			memDC.CreateCompatibleDC(&clientDC);
+			CBitmap* pOldBitmap = memDC.SelectObject(&m_nesRenderBitmap);
+			clientDC.StretchBlt(0, 0, 2 * PPU::c_displayWidth, 2 * PPU::c_displayHeight, &memDC, 0, 0, PPU::c_displayWidth, PPU::c_displayHeight, SRCCOPY);
+			memDC.SelectObject(pOldBitmap);
+			//*/
 		}
 	}
 

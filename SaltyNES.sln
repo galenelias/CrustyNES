@@ -13,6 +13,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SaltyLib.WindowsPhone", "Sa
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WinSaltyNES", "WinSaltyNES\WinSaltyNES.vcxproj", "{BC202E05-F8B2-47E2-8A42-FA1220F7336E}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DFBBC9D0-6367-4EF8-967A-69A75215A25C}"
+	ProjectSection(SolutionItems) = preProject
+		Performance1.psess = Performance1.psess
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		SaltyLib\SaltyLib.Shared\SaltyLib.Shared.vcxitems*{10b75e70-996e-43ee-8319-18c068a8928f}*SharedItemsImports = 4
@@ -66,5 +71,8 @@ Global
 		{6B9720ED-C540-4B2E-BFCD-87D5C3845C63} = {CC8FD99A-A28C-4FFD-BED6-CB9F6FE46AEB}
 		{10B75E70-996E-43EE-8319-18C068A8928F} = {CC8FD99A-A28C-4FFD-BED6-CB9F6FE46AEB}
 		{42D02971-BEF1-4D8A-99DF-F5C9E906945F} = {CC8FD99A-A28C-4FFD-BED6-CB9F6FE46AEB}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal
