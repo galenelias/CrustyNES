@@ -33,6 +33,13 @@ enum class PpuStatusFlag
 	InVBlank = 0x80,
 };
 
+enum class MirroringMode
+{
+	HorizontalMirroring,
+	VerticalMirroring,
+	FourScreen,
+};
+
 
 
 class Ppu
@@ -57,7 +64,8 @@ public:
 	void WriteControlRegister2(uint8_t value); // $2001
 	uint8_t ReadPpuStatus();
 	void WriteCpuAddressRegister(uint8_t value);
-	void WriteCpuDataRegister(uint8_t value);   //$2004
+	void WriteCpuDataRegister(uint8_t value);   //$2007
+	uint8_t ReadCpuDataRegister();   //$2007
 
 	void WriteScrollRegister(uint8_t value);   //$2005
 
@@ -65,7 +73,7 @@ public:
 
 	void TriggerOamDMA(uint8_t* pData);
 
-	uint8_t ReadCpuDataRegister();
+	//uint8_t ReadCpuDataRegister();
 
 private:
 	uint8_t ReadMemory8(uint16_t offset);
@@ -73,15 +81,14 @@ private:
 
 	void SetVBlankStatus(bool inVBlank);
 
-	uint16_t GetBaseNametableOffset() const
-	{
-		return 0x2000 + (m_ppuCtrl1 & 0x03) * 0x0400;
-	}
+	uint16_t GetBaseNametableOffset() const;
 
 	uint16_t GetPatternTableOffset() const
 	{
 		return 0x1000 * m_ppuCtrlFlags.backgroundPatternTableAddress;
 	}
+
+	uint16_t CpuDataIncrementAmount() const;
 
 	struct PpuControlFlags
 	{
@@ -106,7 +113,7 @@ private:
 	static const int c_totalScanlines = 240;
 	static const int c_pixelsPerScanlines = 340;
 
-	static const uint16_t c_cbVRAM = 16*1024;
+	static const uint16_t c_cbVRAM = 16*1024; // 0x4000
 	uint8_t m_vram[c_cbVRAM]; // 16KB of video ram
 	uint8_t m_sprRam[256]; // Sprite RAM
 
@@ -125,6 +132,8 @@ private:
 	int m_scanline = 0;
 	int m_pixel = 0; // offset within scanline
 	bool m_shouldRender = false;
+
+	MirroringMode m_mirroringMode;
 
 	CPU::Cpu6502& m_cpu;
 };

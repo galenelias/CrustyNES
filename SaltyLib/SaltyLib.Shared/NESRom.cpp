@@ -51,6 +51,18 @@ void NESROMHeader::LoadFromFile(IReadableFile* pRomFile)
 	this->m_Flags10 = readBuffer[10];
 }
 
+PPU::MirroringMode NESROMHeader::GetMirroringMode() const
+{
+	const uint8_t mirrorBits = (m_Flags6 & 0x09);
+
+	if (mirrorBits == 0x00)
+		return PPU::MirroringMode::HorizontalMirroring;
+	else if (mirrorBits == 0x01)
+		return PPU::MirroringMode::VerticalMirroring;
+	else //if (mirrorBits & 0x08)
+		return PPU::MirroringMode::FourScreen;
+}
+
 
 
 NESRom::NESRom()

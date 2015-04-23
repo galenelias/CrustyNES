@@ -21,6 +21,7 @@ void Ppu::MapRomMemory(const NES::NESRom& rom)
 	// Copy pattern tables into vram
 	memcpy_s(m_vram, _countof(m_vram), m_chrRom, rom.CbChrRomData());
 
+	m_mirroringMode = rom.GetMirroringMode();
 }
 
 
@@ -66,18 +67,32 @@ void Ppu::WriteScrollRegister(uint8_t value)
 }
 
 
-uint8_t Ppu::ReadCpuDataRegister()
+//uint8_t Ppu::ReadCpuDataRegister()
+//{
+//	uint8_t result = ReadMemory8(m_cpuPpuAddr);
+//	m_cpuPpuAddr++; // Auto-increment the ppu address register as reads/writes occur
+//	return result;
+//}
+
+uint16_t Ppu::CpuDataIncrementAmount() const
 {
-	uint8_t result = ReadMemory8(m_cpuPpuAddr);
-	m_cpuPpuAddr++; // Auto-increment the ppu address register as reads/writes occur
-	return result;
+	if (m_ppuCtrlFlags.vramAddressIncrement)
+		return 32;
+	else
+		return 1;
 }
 
 
 void Ppu::WriteCpuDataRegister(uint8_t value)
 {
 	WriteMemory8(m_cpuPpuAddr, value);
-	m_cpuPpuAddr++; // Auto-increment the ppu address register as reads/writes occur
+
+	m_cpuPpuAddr += CpuDataIncrementAmount(); // Auto-increment the ppu address register as reads/writes occur
+}
+
+uint8_t Ppu::ReadCpuDataRegister()
+{
+	return ReadMemory8(m_cpuPpuAddr);
 }
 
 void Ppu::WriteOamAddress(uint8_t value)
@@ -149,7 +164,22 @@ bool Ppu::ShouldRender()
 	return shouldRender;
 }
 
-//void Ppu::RenderWin32(HDC hdc, const RECT /*bounds*/)
+uint8_t CombinePixelData(uint8_t baseData, uint8_t attributeData, int iRow, int iColumn)
+{
+	auto bitOffset = ((iRow & 2) << 1) | (iColumn & 2);
+	return baseData | ((attributeData >> bitOffset) & 0x3) << 2;
+}
+
+uint16_t Ppu::GetBaseNametableOffset() const
+{
+	uint16_t offset = 0x2000 + (m_ppuCtrl1 & 0x03) * 0x0400;
+
+	if (offset > 0x2000)
+		std::runtime_error("hrm");
+
+	return offset;
+}
+
 void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 {
 	const uint16_t nameTableOffset = GetBaseNametableOffset();
@@ -157,6 +187,25 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 
 	const int c_rows = 30;
 	const int c_columnsPerRow = 32;
+
+	static const DWORD c_colorTable[64] = {
+		0x808080, 0x003DA6, 0x0012B0, 0x440096,
+		0xA1005E, 0xC70028, 0xBA0600, 0x8C1700,
+		0x5C2F00, 0x104500, 0x054A00, 0x00472E,
+		0x004166, 0x000000, 0x050505, 0x050505,
+		0xC7C7C7, 0x0077FF, 0x2155FF, 0x8237FA,
+		0xEB2FB5, 0xFF2950, 0xFF2200, 0xD63200,
+		0xC46200, 0x358000, 0x058F00, 0x008A55,
+		0x0099CC, 0x212121, 0x090909, 0x090909,
+		0xFFFFFF, 0x0FD7FF, 0x69A2FF, 0xD480FF,
+		0xFF45F3, 0xFF618B, 0xFF8833, 0xFF9C12,
+		0xFABC20, 0x9FE30E, 0x2BF035, 0x0CF0A4,
+		0x05FBFF, 0x5E5E5E, 0x0D0D0D, 0x0D0D0D,
+		0xFFFFFF, 0xA6FCFF, 0xB3ECFF, 0xDAABEB,
+		0xFFA8F9, 0xFFABB3, 0xFFD2B0, 0xFFEFA6,
+		0xFFF79C, 0xD7E895, 0xA6EDAF, 0xA2F2DA,
+		0x99FFFC, 0xDDDDDD, 0x111111, 0x111111,
+	};
 
 	for (int iRow = 0; iRow != c_rows; ++iRow)
 	{
@@ -175,24 +224,13 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 					const int colorIndex = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
 					                       + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
 				
-					COLORREF color = PPU_RGB(255,0,255);
-					switch (colorIndex)
-					{
-					case 0:
-						color = PPU_RGB(0,0,0);
-						break;
-					case 1:
-						color = PPU_RGB(255,0,0);
-						break;
-					case 2:
-						color = PPU_RGB(0,255,0);
-						break;
-					case 3:
-						color = PPU_RGB(0,0,255);
-						break;
-					}
+					const uint8_t attributeIndex = static_cast<uint8_t>((iRow / 4) * 8 + (iColumn / 4));
+					const uint8_t attributeData = m_vram[nameTableOffset + (c_rows * c_columnsPerRow) + attributeIndex];
+					const uint8_t fullPixelData = CombinePixelData(colorIndex, attributeData, iRow, iColumn);
 
-					displayBuffer[iRow * 8 + iPixelRow][iColumn * 8 + iPixelColumn] = color;
+					const uint8_t colorDataOffset = m_vram[0x3F00 + fullPixelData];
+
+					displayBuffer[iRow * 8 + iPixelRow][iColumn * 8 + iPixelColumn] = c_colorTable[colorDataOffset];
 				}
 			}
 		}

@@ -25,6 +25,13 @@ public:
 
 // Implementation
 protected:
+
+	static std::wstring PickRomFile();
+	void OpenRomFile(LPCWSTR pwzRomFile);
+	void StartLoggiong();
+
+	void RunCycles(int nCycles, bool runInfinitely);
+
 	HICON m_hIcon;
 
 	CFont m_logBoxFont;
@@ -50,4 +57,8 @@ public:
 
 private:
 	NES::NES m_nes;
+public:
+	afx_msg void OnBnClickedOpenRom();
+	afx_msg void OnBnClickedRunCycles();
+	afx_msg void OnBnClickedRunInfinite();
 };

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Ppu.h"
+
 #include <stdint.h>
 #include <memory>
 
@@ -15,19 +17,23 @@ public:
 
 class InvalidRomFormatException;
 
+
 namespace NES
 {
 
 class NESROMHeader
 {
 public:
+
 	void LoadFromFile(IReadableFile* pRomFile);
 
+	bool UseBattery() const { return (m_Flags6 & 0x01) != 0; }
 	bool UseTrainer() const { return (m_Flags6 & 0x04) != 0; }
 	uint16_t CbPrgRomData() const { return m_cbPRGRom * 16 * 1024; }
 	uint16_t CbChrRomData() const { return m_cbCHRRom * 8 * 1024; }
 
-	byte MapperNumber() { return ((m_Flags6 & 0xF0) >> 4) | (m_Flags7 & 0x0f); }
+	PPU::MirroringMode GetMirroringMode() const;
+	byte MapperNumber() const { return ((m_Flags6 & 0xF0) >> 4) | (m_Flags7 & 0x0f); }
 
 private:
 	uint8_t m_cbPRGRom;
@@ -61,6 +67,8 @@ public:
 	bool HasChrRom() const;
 	const byte* GetChrRom() const;
 	uint16_t CbChrRomData() const { return m_header.CbChrRomData(); }
+
+	PPU::MirroringMode GetMirroringMode() const { return m_header.GetMirroringMode(); }
 
 private:
 	NESROMHeader m_header;

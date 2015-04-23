@@ -62,6 +62,10 @@ uint8_t Cpu6502::ReadMemory8(uint16_t offset) const
 			else
 				return m_prgRom[offset - 0x8000];
 		}
+		else
+		{
+			throw std::runtime_error("Unexpected read location");
+		}
 	}
 	else if (offset < 0x800) // CPU RAM
 	{
@@ -78,6 +82,10 @@ uint8_t Cpu6502::ReadMemory8(uint16_t offset) const
 		else if (mappedOffset == 0x2005 || mappedOffset == 0x2006)
 		{
 			throw std::runtime_error("Unexpected read of VRAM Address register");
+		}
+		else if (mappedOffset = 0x2007)
+		{
+			return m_ppu.ReadCpuDataRegister();
 		}
 		else
 		{

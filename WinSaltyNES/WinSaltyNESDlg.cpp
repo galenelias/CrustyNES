@@ -99,7 +99,9 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_BN_CLICKED(IDC_BUTTON1, &CWinSaltyNESDlg::OnBnClickedButton1)
+	ON_BN_CLICKED(IDC_OPEN_ROM, &CWinSaltyNESDlg::OnBnClickedOpenRom)
+	ON_BN_CLICKED(IDC_RUN_CYCLES, &CWinSaltyNESDlg::OnBnClickedRunCycles)
+	ON_BN_CLICKED(IDC_RUN_INFINITE, &CWinSaltyNESDlg::OnBnClickedRunInfinite)
 END_MESSAGE_MAP()
 
 
@@ -153,27 +155,11 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	// TODO: Add extra initialization here
 	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\LegendOfZelda.nes"));
 
-	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes"));
-
-	CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes"));
+	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes"));
 	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Joust (Japan).nes"));
 	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\nestest.nes"));
 
-	m_nes.LoadRomFile(&romFile);
-	m_nes.Reset();
-
-	PWSTR pwzLocalAppDataPath = nullptr;
-	SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &pwzLocalAppDataPath);
-
-	pwzLocalAppDataPath;
-	std::wstring logFileDirectory = pwzLocalAppDataPath;
-	logFileDirectory += L"\\SaltyNES";
-
-	CreateDirectoryW(logFileDirectory.c_str(), nullptr);
-
-	std::wstring logFilePath = logFileDirectory + L"\\Cpu.log";
-
-	m_debugFileOutput.open(logFilePath.c_str());
+	OpenRomFile(L"C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes");
 
 	SetupRenderBitmap();
 
@@ -186,6 +172,61 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
+
+std::wstring CWinSaltyNESDlg::PickRomFile()
+{
+	IFileDialog* pFileDialog = nullptr;
+	//IFileDialogEvents* pFileDialogEvents = nullptr;
+
+	HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFileDialog));
+
+	IShellItem* psiResult;
+
+	if (FAILED(hr = pFileDialog->Show(NULL)))
+		return std::wstring();
+
+	hr = pFileDialog->GetResult(&psiResult);
+
+	PWSTR pszFilePath = nullptr;
+	psiResult->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+
+	std::wstring result = pszFilePath;
+
+	CoTaskMemFree(pszFilePath);
+
+	return result;
+}
+
+void CWinSaltyNESDlg::OpenRomFile(LPCWSTR pwzRomFile)
+{
+	CWin32ReadOnlyFile romFile(pwzRomFile);
+
+	m_nes.LoadRomFile(&romFile);
+	m_nes.Reset();
+	
+	StartLoggiong();
+}
+
+void CWinSaltyNESDlg::StartLoggiong()
+{
+	PWSTR pwzLocalAppDataPath = nullptr;
+	SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &pwzLocalAppDataPath);
+
+	pwzLocalAppDataPath;
+	std::wstring logFileDirectory = pwzLocalAppDataPath;
+	logFileDirectory += L"\\SaltyNES";
+
+	CreateDirectoryW(logFileDirectory.c_str(), nullptr);
+
+	std::wstring logFilePath = logFileDirectory + L"\\Cpu.log";
+
+	if (m_debugFileOutput)
+		m_debugFileOutput.close();
+
+	m_debugFileOutput.open(logFilePath.c_str());
+
+}
+
 
 void CWinSaltyNESDlg::SetupRenderBitmap()
 {
@@ -202,23 +243,10 @@ void CWinSaltyNESDlg::SetupRenderBitmap()
 	m_nesRenderBitmapInfo.bmiHeader.biCompression = BI_RGB;
 	memset(&m_nesRenderBitmapInfo.bmiColors, 0, sizeof(RGBQUAD));
 
-	const int c_bytesPerPixel = 4;
 	DWORD bitmapData[PPU::c_displayWidth * PPU::c_displayHeight];
+	memset(bitmapData, 0, sizeof(bitmapData));
 
-	for (int iRow=0; iRow != PPU::c_displayHeight; ++iRow)
-	{
-		for (int iColumn=0; iColumn != PPU::c_displayWidth; ++iColumn)
-		{
-			const int colorIndex = iRow * PPU::c_displayWidth + iColumn;
-			//spBitmapData[colorIndex * c_bytesPerPixel + 0] = iRow % 255;// RGB(iRow % 255, iColumn % 255, (iRow + iColumn) % 255);
-			//spBitmapData[colorIndex * c_bytesPerPixel + 1] = iColumn % 255;// RGB(iRow % 255, iColumn % 255, (iRow + iColumn) % 255);
-			//spBitmapData[colorIndex * c_bytesPerPixel + 2] = (iRow + iColumn) % 255;// RGB(iRow % 255, iColumn % 255, (iRow + iColumn) % 255);
-
-			bitmapData[colorIndex] = RGB(iRow % 255, iColumn % 255, (iRow + iColumn) % 255);
-		}
-	}
 	::SetDIBits(clientDC.GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, bitmapData, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
-
 }
 
 void CWinSaltyNESDlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -272,10 +300,15 @@ HCURSOR CWinSaltyNESDlg::OnQueryDragIcon()
 
 
 
-void CWinSaltyNESDlg::OnBnClickedButton1()
+void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 {
-	for (int instructionsRun = 0;instructionsRun < 50000; instructionsRun++)
+	PPU::ppuDisplayBuffer_t screenPixels;
+
+	for (int instructionsRun = 0; instructionsRun < nCycles; )
 	{
+		if (!runInfinitely)
+			instructionsRun++;
+
 		//std::string str = m_nes.GetCpu().GetDebugState() + "\n";
 		//m_debugFileOutput.write(str.c_str(), str.size());
 
@@ -283,27 +316,10 @@ void CWinSaltyNESDlg::OnBnClickedButton1()
 
 		if (m_nes.GetPpu().ShouldRender())
 		{
-			RECT clientRect;
-			GetClientRect(&clientRect);
 			CClientDC clientDC(this);
 
-			PPU::ppuDisplayBuffer_t screenPixels;
 
 			m_nes.GetPpu().RenderToBuffer(screenPixels);
-
-			/*
-			for (int iRow = 0; iRow != PPU::c_displayHeight; ++iRow)
-			{
-				for (int iColumn=0; iColumn != PPU::c_displayWidth; ++iColumn)
-				{
-					const COLORREF color = screenPixels[iRow][iColumn];
-					SetPixel(clientDC.GetSafeHdc(), iColumn*2 + 0, iRow*2 + 0, color);
-					SetPixel(clientDC.GetSafeHdc(), iColumn*2 + 1, iRow*2 + 0, color);
-					SetPixel(clientDC.GetSafeHdc(), iColumn*2 + 0, iRow*2 + 1, color);
-					SetPixel(clientDC.GetSafeHdc(), iColumn*2 + 1, iRow*2 + 1, color);
-				}
-			}
-			/*/
 
 			::SetDIBits(clientDC.GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, screenPixels, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
 
@@ -312,7 +328,6 @@ void CWinSaltyNESDlg::OnBnClickedButton1()
 			CBitmap* pOldBitmap = memDC.SelectObject(&m_nesRenderBitmap);
 			clientDC.StretchBlt(0, 0, 2 * PPU::c_displayWidth, 2 * PPU::c_displayHeight, &memDC, 0, 0, PPU::c_displayWidth, PPU::c_displayHeight, SRCCOPY);
 			memDC.SelectObject(pOldBitmap);
-			//*/
 		}
 	}
 
@@ -324,5 +339,25 @@ void CWinSaltyNESDlg::OnBnClickedButton1()
 	wchar_t wzProgramCounter[32];
 	swprintf_s(wzProgramCounter, _countof(wzProgramCounter),L"%04hX", m_nes.GetCpu().GetProgramCounter());
 	SetDlgItemTextW(IDC_PROGRAM_COUNTER, wzProgramCounter);
+}
 
+
+void CWinSaltyNESDlg::OnBnClickedOpenRom()
+{
+	std::wstring romFileName = PickRomFile();
+
+	if (!romFileName.empty())
+		OpenRomFile(romFileName.c_str());
+}
+
+
+void CWinSaltyNESDlg::OnBnClickedRunCycles()
+{
+	RunCycles(200000, false /*runInfinitely*/);
+}
+
+
+void CWinSaltyNESDlg::OnBnClickedRunInfinite()
+{
+	RunCycles(1, true);
 }
