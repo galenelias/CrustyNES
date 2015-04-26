@@ -10,6 +10,7 @@
 #include "NESRom.h"
 #include "Ppu.h"
 #include "Cpu6502.h"
+#include "Stopwatch.h"
 
 #include <Shlobj.h>
 #include <stdexcept>
@@ -303,6 +304,9 @@ HCURSOR CWinSaltyNESDlg::OnQueryDragIcon()
 void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 {
 	PPU::ppuDisplayBuffer_t screenPixels;
+	Stopwatch stopwatch(true /*start*/);
+
+	int nFrames = 0;
 
 	for (int instructionsRun = 0; instructionsRun < nCycles; )
 	{
@@ -318,7 +322,7 @@ void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 		{
 			CClientDC clientDC(this);
 
-
+			nFrames++;
 			m_nes.GetPpu().RenderToBuffer(screenPixels);
 
 			::SetDIBits(clientDC.GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, screenPixels, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
@@ -330,6 +334,14 @@ void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 			memDC.SelectObject(pOldBitmap);
 		}
 	}
+
+	auto duration = stopwatch.Stop();
+	WCHAR wzFramesStatus[1024];
+	const int durationInMilliseconds = (int)(duration.GetMilliseconds());
+	const int framesPerSecond = (int)(nFrames * 1000 / durationInMilliseconds);
+	swprintf_s(wzFramesStatus, _countof(wzFramesStatus), L"Frames = %d\r\nDuration (msec) = %d\r\nFrames/s = %d\r\n", nFrames, durationInMilliseconds, framesPerSecond);
+
+	SetDlgItemTextW(IDC_STATUSEDIT, wzFramesStatus);
 
 	m_debugFileOutput.flush();
 

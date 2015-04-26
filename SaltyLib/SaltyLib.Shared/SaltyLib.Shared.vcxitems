@@ -20,6 +20,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)NESRom.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Ppu.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SaltyLib.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Stopwatch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)targetver.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
   </ItemGroup>
@@ -32,6 +33,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Stopwatch.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectCapability Include="SourceItemsFromImports" />
