@@ -82,6 +82,7 @@ private:
 	void SetVBlankStatus(bool inVBlank);
 
 	uint16_t GetBaseNametableOffset() const;
+	uint16_t GetSpriteNametableOffset() const;
 
 	uint16_t GetPatternTableOffset() const
 	{
@@ -89,6 +90,8 @@ private:
 	}
 
 	uint16_t CpuDataIncrementAmount() const;
+
+	void DrawTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer);
 
 	struct PpuControlFlags
 	{

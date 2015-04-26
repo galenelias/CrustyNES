@@ -630,7 +630,7 @@ void Cpu6502::RunNextInstruction()
 			SetStatusFlagsFromValue(m_acc);
 			break;
 		}
-		case OpCode1::EOR: // Logical OR
+		case OpCode1::EOR: // Logical Exclusive OR
 		{
 			const uint8_t m = ReadUInt8(addressingMode, instruction);
 			m_acc = m ^ m_acc;

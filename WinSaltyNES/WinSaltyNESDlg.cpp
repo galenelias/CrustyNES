@@ -159,7 +159,7 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Joust (Japan).nes"));
 	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\nestest.nes"));
 
-	OpenRomFile(L"C:\\Games\\Emulation\\NES_Roms\\Balloon Fight (USA).nes");
+	OpenRomFile(L"C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes");
 
 	SetupRenderBitmap();
 
