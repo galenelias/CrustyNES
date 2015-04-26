@@ -9,6 +9,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)CoreUtils.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Ppu.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NES.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Stopwatch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
@@ -19,5 +20,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Cpu6502.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Ppu.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Stopwatch.cpp" />
   </ItemGroup>
 </Project>

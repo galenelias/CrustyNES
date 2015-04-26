@@ -3,8 +3,6 @@
 #include "NESRom.h"
 #include "Cpu6502.h"
 
-#include <Windows.h>
-
 namespace PPU
 {
 
@@ -87,13 +85,6 @@ void Ppu::WriteScrollRegister(uint8_t value)
 	m_scrollWriteParity = !m_scrollWriteParity;
 }
 
-
-//uint8_t Ppu::ReadCpuDataRegister()
-//{
-//	uint8_t result = ReadMemory8(m_cpuPpuAddr);
-//	m_cpuPpuAddr++; // Auto-increment the ppu address register as reads/writes occur
-//	return result;
-//}
 
 uint16_t Ppu::CpuDataIncrementAmount() const
 {
@@ -185,7 +176,6 @@ bool Ppu::ShouldRender()
 	return shouldRender;
 }
 
-//uint8_t CombinePixelData(uint8_t baseData, uint8_t attributeData, int iRow, int iColumn)
 uint8_t GetHighOrderColorFromAttributeEntry(uint8_t attributeData, int iRow, int iColumn)
 {
 	auto bitOffset = ((iRow & 2) << 1) | (iColumn & 2);
@@ -195,7 +185,6 @@ uint8_t GetHighOrderColorFromAttributeEntry(uint8_t attributeData, int iRow, int
 uint16_t Ppu::GetBaseNametableOffset() const
 {
 	uint16_t offset = 0x2000 + (m_ppuCtrlFlags.nametableBaseAddress * 0x0400);
-	//uint16_t offset = 0x2000 + (m_ppuCtrl1 & 0x03) * 0x0400;
 
 	if (offset > 0x2000)
 		std::runtime_error("hrm");
@@ -210,12 +199,15 @@ uint16_t Ppu::GetSpriteNametableOffset() const
 
 }
 
-void Ppu::DrawTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer)
+void Ppu::DrawTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool flipHorizontally, bool flipVertically, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer)
 {
 	const int tileOffsetBase = patternTableOffset + (tileNumber << 4);
 
 	for (int iPixelRow = 0; iPixelRow != 8; ++iPixelRow)
 	{
+		if (iRow + iPixelRow >= c_displayHeight)
+			break;
+
 		for (int iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
 		{
 			const uint8_t colorByte1 = m_vram[tileOffsetBase + iPixelRow];
@@ -226,7 +218,9 @@ void Ppu::DrawTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int
 			const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
 			const uint8_t colorDataOffset = m_vram[0x3F00 + fullPixelBytes];
 
-			displayBuffer[iRow + iPixelRow][iColumn + iPixelColumn] = c_nesRgbColorTable[colorDataOffset];
+			const int iPixelRowOffset = flipVertically ? (8 - iPixelRow) : iPixelRow;
+			const int iPixelColumnOffset = flipHorizontally ? (8 - iPixelColumn) : iPixelColumn;
+			displayBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = c_nesRgbColorTable[colorDataOffset];
 		}
 	}
 
@@ -245,37 +239,16 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 	{
 		for (int iColumn = 0; iColumn != c_columnsPerRow; ++iColumn)
 		{
-			uint8_t tileNumber = m_vram[nameTableOffset + iRow * c_columnsPerRow + iColumn];
-
-			//const int tileOffsetBase = patternTableOffset + (tileNumber << 4);
-
+			const uint8_t tileNumber = m_vram[nameTableOffset + iRow * c_columnsPerRow + iColumn];
 			const uint8_t attributeIndex = static_cast<uint8_t>((iRow / 4) * 8 + (iColumn / 4));
 			const uint8_t attributeData = m_vram[nameTableOffset + (c_rows * c_columnsPerRow) + attributeIndex];
 			const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRow, iColumn);
 
-			DrawTile(tileNumber, highOrderColorBits, iRow * 8, iColumn * 8, patternTableOffset, displayBuffer);
-
-
-			//for (int iPixelRow = 0; iPixelRow != 8; ++iPixelRow)
-			//{
-			//	for (int iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
-			//	{
-			//		const uint8_t colorByte1 = m_vram[tileOffsetBase + iPixelRow];
-			//		const uint8_t colorByte2 = m_vram[tileOffsetBase + iPixelRow + 8];
-			//		const int lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
-			//		                             + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
-			//	
-			//		const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderColorBits;
-			//		const uint8_t colorDataOffset = m_vram[0x3F00 + fullPixelBytes];
-
-			//		displayBuffer[iRow * 8 + iPixelRow][iColumn * 8 + iPixelColumn] = c_nesRgbColorTable[colorDataOffset];
-			//	}
-			//}
+			DrawTile(tileNumber, highOrderColorBits, iRow * 8, iColumn * 8, false, false, patternTableOffset, displayBuffer);
 		}
 	}
 
 	const uint16_t spriteNameTableOffset = GetSpriteNametableOffset();
-	// Render sprites
 	const int c_bytesPerSprite = 4;
 	for (int iSprite = 0; iSprite != 64; ++iSprite)
 	{
@@ -293,14 +266,9 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 		const bool flipHorizontally = (thirdByte & 0x40) != 0;
 		const bool flipVertically = (thirdByte & 0x80) != 0;
 
-		DrawTile(tileNumber, highOrderColorBits, spriteY, spriteX, spriteNameTableOffset, displayBuffer);
+		DrawTile(tileNumber, highOrderColorBits, spriteY, spriteX, flipHorizontally, flipVertically, spriteNameTableOffset, displayBuffer);
 	}
-	//m_sprRam
-
-
 }
-
-
 
 } // namespace PPU
 
