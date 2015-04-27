@@ -6,6 +6,9 @@
 namespace PPU
 {
 
+const uint16_t c_paletteBkgOffset = 0x3F00;
+const uint16_t c_paletteSprOffset = 0x3F10;
+
 // Color table mapping the NES's color table to RGB values
 static const DWORD c_nesRgbColorTable[64] = {
 	0x808080, 0x003DA6, 0x0012B0, 0x440096,
@@ -199,7 +202,7 @@ uint16_t Ppu::GetSpriteNametableOffset() const
 
 }
 
-void Ppu::DrawTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool flipHorizontally, bool flipVertically, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer)
+void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer)
 {
 	const int tileOffsetBase = patternTableOffset + (tileNumber << 4);
 
@@ -216,15 +219,40 @@ void Ppu::DrawTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int
 										 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
 		
 			const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
-			const uint8_t colorDataOffset = m_vram[0x3F00 + fullPixelBytes];
+			const uint8_t colorDataOffset = m_vram[c_paletteBkgOffset + fullPixelBytes];
+
+			displayBuffer[iRow + iPixelRow][iColumn + iPixelColumn] = c_nesRgbColorTable[colorDataOffset];
+		}
+	}
+}
+
+
+void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool flipHorizontally, bool flipVertically, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer)
+{
+	const int tileOffsetBase = patternTableOffset + (tileNumber << 4);
+
+	for (int iPixelRow = 0; iPixelRow != 8; ++iPixelRow)
+	{
+		if (iRow + iPixelRow >= c_displayHeight)
+			break;
+
+		for (int iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
+		{
+			const uint8_t colorByte1 = m_vram[tileOffsetBase + iPixelRow];
+			const uint8_t colorByte2 = m_vram[tileOffsetBase + iPixelRow + 8];
+			const int lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
+										 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
+		
+			const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
+			const uint8_t colorDataOffset = m_vram[c_paletteSprOffset + fullPixelBytes];
 
 			const int iPixelRowOffset = flipVertically ? (8 - iPixelRow) : iPixelRow;
 			const int iPixelColumnOffset = flipHorizontally ? (8 - iPixelColumn) : iPixelColumn;
 			displayBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = c_nesRgbColorTable[colorDataOffset];
 		}
 	}
-
 }
+
 
 void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 {
@@ -244,7 +272,7 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 			const uint8_t attributeData = m_vram[nameTableOffset + (c_rows * c_columnsPerRow) + attributeIndex];
 			const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRow, iColumn);
 
-			DrawTile(tileNumber, highOrderColorBits, iRow * 8, iColumn * 8, false, false, patternTableOffset, displayBuffer);
+			DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8, iColumn * 8, patternTableOffset, displayBuffer);
 		}
 	}
 
@@ -266,7 +294,7 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 		const bool flipHorizontally = (thirdByte & 0x40) != 0;
 		const bool flipVertically = (thirdByte & 0x80) != 0;
 
-		DrawTile(tileNumber, highOrderColorBits, spriteY, spriteX, flipHorizontally, flipVertically, spriteNameTableOffset, displayBuffer);
+		DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, flipHorizontally, flipVertically, spriteNameTableOffset, displayBuffer);
 	}
 }
 

@@ -23,20 +23,36 @@ Stopwatch::Stopwatch(bool startTiming /*= false*/)
 
 void Stopwatch::Start()
 {
+	QueryPerformanceFrequency(&m_timerFrequency);
 	QueryPerformanceCounter(&m_startCounterValue);
 }
 
-Duration Stopwatch::Stop()
+Duration Stopwatch::DurationFromCounters(LONGLONG startCounter, LONGLONG endCounter) const
 {
-	LARGE_INTEGER stopCounter, elapsedMicroseconds;
+	LONGLONG elapsedMicroseconds = endCounter - startCounter;
+	elapsedMicroseconds *= 1000000;
+	elapsedMicroseconds /= m_timerFrequency.QuadPart;
 
-	QueryPerformanceCounter(&stopCounter);
-	LARGE_INTEGER timerFrequency;
-	QueryPerformanceFrequency(&timerFrequency);
-
-	elapsedMicroseconds.QuadPart = stopCounter.QuadPart - m_startCounterValue.QuadPart;
-	elapsedMicroseconds.QuadPart *= 1000000;
-	elapsedMicroseconds.QuadPart /= timerFrequency.QuadPart;
-
-	return Duration::FromMicroseconds(elapsedMicroseconds.QuadPart);
+	return Duration::FromMicroseconds(elapsedMicroseconds);
 }
+
+
+Duration Stopwatch::Stop() const
+{
+	LARGE_INTEGER stopCounter;
+	QueryPerformanceCounter(&stopCounter);
+
+	return DurationFromCounters(m_startCounterValue.QuadPart, stopCounter.QuadPart);
+}
+
+Duration Stopwatch::Lap()
+{
+	LARGE_INTEGER stopCounter;
+	QueryPerformanceCounter(&stopCounter);
+
+	Duration result = DurationFromCounters(m_startCounterValue.QuadPart, stopCounter.QuadPart);
+	m_startCounterValue = stopCounter;
+
+	return result;
+}
+

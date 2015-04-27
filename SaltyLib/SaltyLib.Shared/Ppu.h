@@ -91,7 +91,8 @@ private:
 
 	uint16_t CpuDataIncrementAmount() const;
 
-	void DrawTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool flipHorizontally, bool flipVertically, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer);
+	void DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer);
+	void DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool flipHorizontally, bool flipVertically, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer);
 
 	struct PpuControlFlags
 	{

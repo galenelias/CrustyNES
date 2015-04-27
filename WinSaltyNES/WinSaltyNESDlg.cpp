@@ -20,6 +20,9 @@
 #endif
 
 
+//#define WMU_FRAME_PULSE ()
+const DWORD WMU_FRAME_PULSE = WM_USER + 1;
+
 class CWin32ReadOnlyFile : public IReadableFile
 {
 public:
@@ -103,6 +106,8 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_OPEN_ROM, &CWinSaltyNESDlg::OnBnClickedOpenRom)
 	ON_BN_CLICKED(IDC_RUN_CYCLES, &CWinSaltyNESDlg::OnBnClickedRunCycles)
 	ON_BN_CLICKED(IDC_RUN_INFINITE, &CWinSaltyNESDlg::OnBnClickedRunInfinite)
+	ON_MESSAGE(WMU_FRAME_PULSE, &CWinSaltyNESDlg::OnFramePulse)
+	ON_WM_ERASEBKGND()
 END_MESSAGE_MAP()
 
 
@@ -288,7 +293,39 @@ void CWinSaltyNESDlg::OnPaint()
 	}
 	else
 	{
-		CDialogEx::OnPaint();
+		//CDialogEx::OnPaint();
+
+		if (m_runMode == NESRunMode::Continuous)
+		{
+			for (;;)
+			{
+				m_nes.RunCycle();
+
+				if (m_nes.GetPpu().ShouldRender())
+				{
+					CPaintDC dcPaint(this);
+					PaintNESFrame(&dcPaint);
+					break;
+				}
+			}
+
+			Duration frameTime = m_frameStopwatch.Lap();
+			int averageFrameTime = (int)m_fpsAverage.AddValue(frameTime.GetMilliseconds());
+			if (averageFrameTime == 0)
+				averageFrameTime = 1;
+
+			WCHAR wzAverageFps[128];
+			swprintf_s(wzAverageFps, _countof(wzAverageFps), L"%d fps", 1000 / averageFrameTime);
+			SetDlgItemTextW(IDC_STATUSEDIT, wzAverageFps);
+
+			CDialogEx::OnPaint();
+			this->Invalidate(FALSE);
+		}
+		else
+		{
+			CDialogEx::OnPaint();
+		}
+		//PostMessage(WMU_FRAME_PULSE, 0, 0);
 	}
 }
 
@@ -300,10 +337,25 @@ HCURSOR CWinSaltyNESDlg::OnQueryDragIcon()
 }
 
 
+void CWinSaltyNESDlg::PaintNESFrame(CDC* pDC)
+{
+	PPU::ppuDisplayBuffer_t screenPixels;
+
+	m_nes.GetPpu().RenderToBuffer(screenPixels);
+
+	::SetDIBits(pDC->GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, screenPixels, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
+
+	CDC memDC;
+	memDC.CreateCompatibleDC(pDC);
+	CBitmap* pOldBitmap = memDC.SelectObject(&m_nesRenderBitmap);
+	pDC->StretchBlt(0, 0, 2 * PPU::c_displayWidth, 2 * PPU::c_displayHeight, &memDC, 0, 0, PPU::c_displayWidth, PPU::c_displayHeight, SRCCOPY);
+	memDC.SelectObject(pOldBitmap);
+}
+
 
 void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 {
-	PPU::ppuDisplayBuffer_t screenPixels;
+	//PPU::ppuDisplayBuffer_t screenPixels;
 	Stopwatch stopwatch(true /*start*/);
 
 	int nFrames = 0;
@@ -321,17 +373,8 @@ void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 		if (m_nes.GetPpu().ShouldRender())
 		{
 			CClientDC clientDC(this);
-
 			nFrames++;
-			m_nes.GetPpu().RenderToBuffer(screenPixels);
-
-			::SetDIBits(clientDC.GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, screenPixels, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
-
-			CDC memDC;
-			memDC.CreateCompatibleDC(&clientDC);
-			CBitmap* pOldBitmap = memDC.SelectObject(&m_nesRenderBitmap);
-			clientDC.StretchBlt(0, 0, 2 * PPU::c_displayWidth, 2 * PPU::c_displayHeight, &memDC, 0, 0, PPU::c_displayWidth, PPU::c_displayHeight, SRCCOPY);
-			memDC.SelectObject(pOldBitmap);
+			PaintNESFrame(&clientDC);
 		}
 	}
 
@@ -371,5 +414,45 @@ void CWinSaltyNESDlg::OnBnClickedRunCycles()
 
 void CWinSaltyNESDlg::OnBnClickedRunInfinite()
 {
-	RunCycles(1, true);
+	if (m_runMode != NESRunMode::Continuous)
+	{
+		m_runMode = NESRunMode::Continuous;
+		m_frameStopwatch.Start();
+		//PostMessage(WMU_FRAME_PULSE, 0, 0);
+		this->Invalidate(FALSE);
+	}
+	else
+	{
+		m_runMode = NESRunMode::Paused;
+	}
+}
+
+
+LRESULT CWinSaltyNESDlg::OnFramePulse(WPARAM /*wParam*/, LPARAM /*lParam*/)
+{
+	for (;;)
+	{
+		m_nes.RunCycle();
+
+		if (m_nes.GetPpu().ShouldRender())
+		{
+			CClientDC clientDC(this);
+			PaintNESFrame(&clientDC);
+			break;
+		}
+	}
+
+	if (m_runMode == NESRunMode::Continuous)
+		PostMessage(WMU_FRAME_PULSE, 0, 0);
+
+	//std::string str = m_nes.GetCpu().GetDebugState() + "\n";
+	//m_debugFileOutput.write(str.c_str(), str.size());
+
+	return 0;
+}
+
+
+BOOL CWinSaltyNESDlg::OnEraseBkgnd(CDC* /*pDC*/)
+{
+	return FALSE;
 }

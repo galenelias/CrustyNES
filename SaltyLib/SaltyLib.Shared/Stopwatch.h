@@ -17,10 +17,15 @@ class Stopwatch
 public:
 	Stopwatch(bool startTiming = false);
 
+
 	void Start();
-	Duration Stop();
+	Duration Stop() const;
+	Duration Lap();
 
 private:
+	Duration DurationFromCounters(LONGLONG startCounter, LONGLONG endCounter) const;
+
+	LARGE_INTEGER m_timerFrequency;
 	LARGE_INTEGER m_startCounterValue;
 };
 

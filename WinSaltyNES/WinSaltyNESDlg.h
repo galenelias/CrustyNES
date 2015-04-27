@@ -8,6 +8,8 @@
 #include <fstream>
 
 #include "NES.h"
+#include "MovingAverage.h"
+#include "Stopwatch.h"
 
 // CWinSaltyNESDlg dialog
 class CWinSaltyNESDlg : public CDialogEx
@@ -51,14 +53,28 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
-public:
-	afx_msg void OnBnClickedButton1();
-
 
 private:
+	void PaintNESFrame(CDC* pDC);
+
 	NES::NES m_nes;
+	enum class NESRunMode
+	{
+		StepSingle,
+		Continuous,
+		Paused,
+	};
+
+	NESRunMode m_runMode = NESRunMode::Paused;
+
+	MovingAverage<LONGLONG, 30> m_fpsAverage;
+	Stopwatch m_frameStopwatch;
+
 public:
+	afx_msg void OnBnClickedButton1();
 	afx_msg void OnBnClickedOpenRom();
 	afx_msg void OnBnClickedRunCycles();
 	afx_msg void OnBnClickedRunInfinite();
+	afx_msg LRESULT OnFramePulse(WPARAM wParam, LPARAM lParam);
+	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 };
