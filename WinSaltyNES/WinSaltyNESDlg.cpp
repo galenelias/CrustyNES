@@ -23,6 +23,8 @@
 //#define WMU_FRAME_PULSE ()
 const DWORD WMU_FRAME_PULSE = WM_USER + 1;
 
+const DWORD TIMER_REDRAW = 0;
+
 class CWin32ReadOnlyFile : public IReadableFile
 {
 public:
@@ -108,6 +110,7 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_RUN_INFINITE, &CWinSaltyNESDlg::OnBnClickedRunInfinite)
 	ON_MESSAGE(WMU_FRAME_PULSE, &CWinSaltyNESDlg::OnFramePulse)
 	ON_WM_ERASEBKGND()
+	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
 
@@ -319,7 +322,10 @@ void CWinSaltyNESDlg::OnPaint()
 			SetDlgItemTextW(IDC_STATUSEDIT, wzAverageFps);
 
 			CDialogEx::OnPaint();
-			this->Invalidate(FALSE);
+
+			SetTimer(TIMER_REDRAW, 0, nullptr);
+
+			//this->Invalidate(FALSE);
 		}
 		else
 		{
@@ -455,4 +461,17 @@ LRESULT CWinSaltyNESDlg::OnFramePulse(WPARAM /*wParam*/, LPARAM /*lParam*/)
 BOOL CWinSaltyNESDlg::OnEraseBkgnd(CDC* /*pDC*/)
 {
 	return FALSE;
+}
+
+
+void CWinSaltyNESDlg::OnTimer(UINT_PTR nIDEvent)
+{
+	switch (nIDEvent)
+	{
+	case TIMER_REDRAW:
+		Invalidate(FALSE /*erase*/);
+		break;
+	}
+
+	CDialogEx::OnTimer(nIDEvent);
 }

@@ -77,4 +77,5 @@ public:
 	afx_msg void OnBnClickedRunInfinite();
 	afx_msg LRESULT OnFramePulse(WPARAM wParam, LPARAM lParam);
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
 };
