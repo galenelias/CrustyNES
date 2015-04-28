@@ -149,7 +149,8 @@ void Ppu::WriteControlRegister2(uint8_t value)
 void Ppu::DoStuff()
 {
 	// We are going to do approximately ~3 cycles worth of work per 'DoStuff', which is 9 pixels of processing
-	m_pixel += 12;
+	//m_pixel += 12;
+	m_pixel += 25;
 	if (m_pixel >= c_pixelsPerScanlines)
 	{
 		m_pixel %= c_pixelsPerScanlines;
@@ -202,7 +203,7 @@ uint16_t Ppu::GetSpriteNametableOffset() const
 
 }
 
-void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer)
+void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
 {
 	const int tileOffsetBase = patternTableOffset + (tileNumber << 4);
 
@@ -222,12 +223,15 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 			const uint8_t colorDataOffset = m_vram[c_paletteBkgOffset + fullPixelBytes];
 
 			displayBuffer[iRow + iPixelRow][iColumn + iPixelColumn] = c_nesRgbColorTable[colorDataOffset];
+			
+			if (lowOrderColorBytes != 0)
+				outputTypeBuffer[iRow + iPixelRow][iColumn + iPixelColumn] = PixelOutputType::Background;
 		}
 	}
 }
 
 
-void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool flipHorizontally, bool flipVertically, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer)
+void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool foregroundSprite, bool flipHorizontally, bool flipVertically, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
 {
 	const int tileOffsetBase = patternTableOffset + (tileNumber << 4);
 
@@ -248,10 +252,20 @@ void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 
 			const int iPixelRowOffset = flipVertically ? (8 - iPixelRow) : iPixelRow;
 			const int iPixelColumnOffset = flipHorizontally ? (8 - iPixelColumn) : iPixelColumn;
-			displayBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = c_nesRgbColorTable[colorDataOffset];
+
+			// TODO: Need to emulate the sprite priority 'bug':  http://wiki.nesdev.com/w/index.php/PPU_sprite_priority
+
+			if (lowOrderColorBytes != 0 
+				&& ((outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::None)
+				     || (foregroundSprite && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))))
+			{
+				displayBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = c_nesRgbColorTable[colorDataOffset];
+				outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = PixelOutputType::Sprite;
+			}
 		}
 	}
 }
+
 
 
 void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
@@ -261,6 +275,9 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 
 	const int c_rows = 30;
 	const int c_columnsPerRow = 32;
+
+	ppuPixelOutputTypeBuffer_t pixelOutputTypeBuffer;
+	memset(pixelOutputTypeBuffer, 0, sizeof(pixelOutputTypeBuffer));
 
 	// Render background tiles
 	for (int iRow = 0; iRow != c_rows; ++iRow)
@@ -272,7 +289,7 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 			const uint8_t attributeData = m_vram[nameTableOffset + (c_rows * c_columnsPerRow) + attributeIndex];
 			const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRow, iColumn);
 
-			DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8, iColumn * 8, patternTableOffset, displayBuffer);
+			DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8, iColumn * 8, patternTableOffset, displayBuffer, pixelOutputTypeBuffer);
 		}
 	}
 
@@ -290,11 +307,11 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 
 		const uint8_t thirdByte = m_sprRam[spriteByteOffset + 2];
 		const uint8_t highOrderColorBits = (thirdByte & 0x3) << 2;
-		const bool hasBackgroundPriority = (thirdByte & 0x20) != 0;
+		const bool isForegroundSprite = (thirdByte & 0x20) == 0;
 		const bool flipHorizontally = (thirdByte & 0x40) != 0;
 		const bool flipVertically = (thirdByte & 0x80) != 0;
 
-		DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, flipHorizontally, flipVertically, spriteNameTableOffset, displayBuffer);
+		DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, spriteNameTableOffset, displayBuffer, pixelOutputTypeBuffer);
 	}
 }
 

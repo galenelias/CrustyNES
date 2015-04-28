@@ -40,6 +40,14 @@ enum class MirroringMode
 	FourScreen,
 };
 
+enum class PixelOutputType : uint8_t
+{
+	None = 0,
+	Background = 1,
+	Sprite = 2,
+};
+
+typedef PixelOutputType ppuPixelOutputTypeBuffer_t[c_displayHeight][c_displayWidth];
 
 
 class Ppu
@@ -91,8 +99,8 @@ private:
 
 	uint16_t CpuDataIncrementAmount() const;
 
-	void DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer);
-	void DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool flipHorizontally, bool flipVertically, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer);
+	void DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer);
+	void DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool foregroundSprite, bool flipHorizontally, bool flipVertically, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer);
 
 	struct PpuControlFlags
 	{
