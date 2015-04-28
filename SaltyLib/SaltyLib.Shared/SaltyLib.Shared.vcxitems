@@ -14,6 +14,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Controller.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CoreUtils.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Cpu6502.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)MovingAverage.h" />
@@ -26,6 +27,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Controller.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Cpu6502.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)MovingAverage.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES.cpp" />

@@ -11,6 +11,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)NES.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Stopwatch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)MovingAverage.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Controller.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
@@ -23,5 +24,6 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)NES.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Stopwatch.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)MovingAverage.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Controller.cpp" />
   </ItemGroup>
 </Project>

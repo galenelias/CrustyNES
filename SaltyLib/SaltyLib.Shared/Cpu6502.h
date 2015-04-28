@@ -11,6 +11,11 @@ namespace PPU
 	class Ppu;
 }
 
+namespace NES
+{
+	class NES;
+}
+
 namespace CPU
 {
 
@@ -172,7 +177,8 @@ DEFINE_ENUM_BITWISE_OPERANDS(CpuStatusFlag);
 class Cpu6502
 {
 public:
-	Cpu6502(PPU::Ppu& ppu); //REVIEW: Should cpu depend on ram, or abstract the PRG/CHR loading?
+	Cpu6502(NES::NES& nes); //REVIEW: Should cpu depend on ram, or abstract the PRG/CHR loading?
+	//Cpu6502(PPU::Ppu& ppu); //REVIEW: Should cpu depend on ram, or abstract the PRG/CHR loading?
 	Cpu6502(const Cpu6502&) = delete;
 	Cpu6502& operator=(const Cpu6502&) = delete;
 
@@ -229,6 +235,7 @@ private:
 	const byte *m_prgRom;
 	uint16_t m_cbPrgRom;
 
+	NES::NES& m_nes;
 	PPU::Ppu& m_ppu;
 
 	// PPU stuff

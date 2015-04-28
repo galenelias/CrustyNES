@@ -28,6 +28,8 @@ public:
 // Implementation
 protected:
 
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
+
 	static std::wstring PickRomFile();
 	void OpenRomFile(LPCWSTR pwzRomFile);
 	void StartLoggiong();
@@ -55,6 +57,8 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 private:
+	void RenderFrame();
+	void IncrementFrameCount(bool shouldUpdateFpsCounter);
 	void PaintNESFrame(CDC* pDC);
 
 	NES::NES m_nes;

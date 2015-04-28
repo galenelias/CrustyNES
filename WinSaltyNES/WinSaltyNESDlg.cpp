@@ -145,39 +145,8 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-	//m_logBoxFont.CreateFont(
-	//	16,                        // nHeight
-	//	0,                         // nWidth
-	//	0,                         // nEscapement
-	//	0,                         // nOrientation
-	//	FW_NORMAL,                 // nWeight
-	//	FALSE,                     // bItalic
-	//	FALSE,                     // bUnderline
-	//	0,                         // cStrikeOut
-	//	ANSI_CHARSET,              // nCharSet
-	//	OUT_DEFAULT_PRECIS,        // nOutPrecision
-	//	CLIP_DEFAULT_PRECIS,       // nClipPrecision
-	//	DEFAULT_QUALITY,           // nQuality
-	//	DEFAULT_PITCH | FF_SWISS,  // nPitchAndFamily
-	//	L"Courier New");                 // lpszFacename
-
-	// TODO: Add extra initialization here
-	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\LegendOfZelda.nes"));
-
-	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes"));
-	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\Joust (Japan).nes"));
-	//CWin32ReadOnlyFile romFile(_T("C:\\Games\\Emulation\\NES_Roms\\nestest.nes"));
-
-	OpenRomFile(L"C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes");
-
+	//OpenRomFile(L"C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes");
 	SetupRenderBitmap();
-
-	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Mike Tyson's Punch-Out!!.nes")));
-	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Dr. Mario.nes")));
-	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\MegaMan.nes")));
-	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\LegendOfZelda.nes")));
-	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\BubbleBobble.nes")));
-	//rom.LoadRomFromFile(&CWin32ReadOnlyFile(_T("C:\\Games\\Emulation\\NES_Roms\\Contra.nes")));
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -233,7 +202,6 @@ void CWinSaltyNESDlg::StartLoggiong()
 		m_debugFileOutput.close();
 
 	m_debugFileOutput.open(logFilePath.c_str());
-
 }
 
 
@@ -296,42 +264,30 @@ void CWinSaltyNESDlg::OnPaint()
 	}
 	else
 	{
-		//CDialogEx::OnPaint();
+		CDialogEx::OnPaint();
 
-		if (m_runMode == NESRunMode::Continuous)
-		{
-			for (;;)
-			{
-				m_nes.RunCycle();
+		//if (m_runMode == NESRunMode::Continuous)
+		//{
+		//	for (;;)
+		//	{
+		//		m_nes.RunCycle();
 
-				if (m_nes.GetPpu().ShouldRender())
-				{
-					CPaintDC dcPaint(this);
-					PaintNESFrame(&dcPaint);
-					break;
-				}
-			}
+		//		if (m_nes.GetPpu().ShouldRender())
+		//		{
+		//			CPaintDC dcPaint(this);
+		//			PaintNESFrame(&dcPaint);
+		//			break;
+		//		}
+		//	}
 
-			Duration frameTime = m_frameStopwatch.Lap();
-			int averageFrameTime = (int)m_fpsAverage.AddValue(frameTime.GetMilliseconds());
-			if (averageFrameTime == 0)
-				averageFrameTime = 1;
+		//	IncrementFrameCount();
 
-			WCHAR wzAverageFps[128];
-			swprintf_s(wzAverageFps, _countof(wzAverageFps), L"%d fps", 1000 / averageFrameTime);
-			SetDlgItemTextW(IDC_STATUSEDIT, wzAverageFps);
-
-			CDialogEx::OnPaint();
-
-			SetTimer(TIMER_REDRAW, 0, nullptr);
-
-			//this->Invalidate(FALSE);
-		}
-		else
-		{
-			CDialogEx::OnPaint();
-		}
-		//PostMessage(WMU_FRAME_PULSE, 0, 0);
+		//	CDialogEx::OnPaint();
+		//}
+		//else
+		//{
+		//	CDialogEx::OnPaint();
+		//}
 	}
 }
 
@@ -361,7 +317,6 @@ void CWinSaltyNESDlg::PaintNESFrame(CDC* pDC)
 
 void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 {
-	//PPU::ppuDisplayBuffer_t screenPixels;
 	Stopwatch stopwatch(true /*start*/);
 
 	int nFrames = 0;
@@ -408,7 +363,10 @@ void CWinSaltyNESDlg::OnBnClickedOpenRom()
 	std::wstring romFileName = PickRomFile();
 
 	if (!romFileName.empty())
+	{
 		OpenRomFile(romFileName.c_str());
+		OnBnClickedRunInfinite();
+	}
 }
 
 
@@ -425,16 +383,27 @@ void CWinSaltyNESDlg::OnBnClickedRunInfinite()
 		m_runMode = NESRunMode::Continuous;
 		m_frameStopwatch.Start();
 		//PostMessage(WMU_FRAME_PULSE, 0, 0);
-		this->Invalidate(FALSE);
+		SetTimer(TIMER_REDRAW, 0, nullptr);
 	}
 	else
 	{
 		m_runMode = NESRunMode::Paused;
+		KillTimer(TIMER_REDRAW);
 	}
 }
 
 
 LRESULT CWinSaltyNESDlg::OnFramePulse(WPARAM /*wParam*/, LPARAM /*lParam*/)
+{
+	RenderFrame();
+
+	//if (m_runMode == NESRunMode::Continuous)
+	//	PostMessage(WMU_FRAME_PULSE, 0, 0);
+
+	return 0;
+}
+
+void CWinSaltyNESDlg::RenderFrame()
 {
 	for (;;)
 	{
@@ -447,20 +416,32 @@ LRESULT CWinSaltyNESDlg::OnFramePulse(WPARAM /*wParam*/, LPARAM /*lParam*/)
 			break;
 		}
 	}
-
-	if (m_runMode == NESRunMode::Continuous)
-		PostMessage(WMU_FRAME_PULSE, 0, 0);
-
+	
 	//std::string str = m_nes.GetCpu().GetDebugState() + "\n";
 	//m_debugFileOutput.write(str.c_str(), str.size());
+}
 
-	return 0;
+void CWinSaltyNESDlg::IncrementFrameCount(bool shouldUpdateFpsCounter)
+{
+	Duration frameTime = m_frameStopwatch.Lap();
+	int averageFrameTime = (int)m_fpsAverage.AddValue(frameTime.GetMilliseconds());
+
+	if (shouldUpdateFpsCounter)
+	{
+		if (averageFrameTime == 0)
+			averageFrameTime = 1;
+
+		WCHAR wzAverageFps[128];
+		swprintf_s(wzAverageFps, _countof(wzAverageFps), L"%d fps", 1000 / averageFrameTime);
+		SetDlgItemTextW(IDC_STATUSEDIT, wzAverageFps);
+	}
 }
 
 
-BOOL CWinSaltyNESDlg::OnEraseBkgnd(CDC* /*pDC*/)
+
+BOOL CWinSaltyNESDlg::OnEraseBkgnd(CDC* pDC)
 {
-	return FALSE;
+	return CDialogEx::OnEraseBkgnd(pDC);
 }
 
 
@@ -469,9 +450,54 @@ void CWinSaltyNESDlg::OnTimer(UINT_PTR nIDEvent)
 	switch (nIDEvent)
 	{
 	case TIMER_REDRAW:
-		Invalidate(FALSE /*erase*/);
+		RenderFrame();
 		break;
 	}
 
 	CDialogEx::OnTimer(nIDEvent);
 }
+
+
+NES::ControllerInput MapVirtualKeyToNesInput(DWORD vkey)
+{
+	switch (vkey)
+	{
+	case VK_RETURN:
+		return NES::ControllerInput::Start;
+	case VK_SPACE:
+		return NES::ControllerInput::Select;
+	case 'z':
+	case 'Z':
+		return NES::ControllerInput::A;
+	case 'x':
+	case 'X':
+		return NES::ControllerInput::B;
+	case VK_DOWN:
+		return NES::ControllerInput::Down;
+	case VK_UP:
+		return NES::ControllerInput::Up;
+	case VK_LEFT:
+		return NES::ControllerInput::Left;
+	case VK_RIGHT:
+		return NES::ControllerInput::Right;
+	default:
+		return NES::ControllerInput::_Max;
+	}
+}
+
+BOOL CWinSaltyNESDlg::PreTranslateMessage(MSG* pMsg)
+{
+	if (pMsg->message == WM_KEYDOWN || pMsg->message == WM_KEYUP)
+	{
+		// Intercept key presses-
+		NES::ControllerInput nesInput = MapVirtualKeyToNesInput(pMsg->wParam);
+		if (nesInput != NES::ControllerInput::_Max)
+		{
+			m_nes.UseController1().SetInputStatus(nesInput, (pMsg->message == WM_KEYDOWN));
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+

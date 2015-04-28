@@ -5,7 +5,7 @@ namespace NES
 {
 
 NES::NES()
-	: m_cpu(m_ppu)
+	: m_cpu(*this)
 	, m_ppu(m_cpu)
 {
 }
@@ -44,6 +44,12 @@ void NES::Reset()
 	m_cpu.Reset();
 	//m_ppu.Reset() // ?
 }
+
+//void NES::SetController1Status(ControllerInput input, bool isPressed)
+//{
+//	m_controller1.SetInputStatus(input, isPressed);
+//}
+
 
 
 }

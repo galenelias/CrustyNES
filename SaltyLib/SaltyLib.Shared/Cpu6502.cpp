@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Cpu6502.h"
 #include "Ppu.h"
+#include "NES.h"
 
 #include <stdexcept>
 #include <sstream>
@@ -19,12 +20,21 @@ enum BranchFlagSelector
 };
 
 
-Cpu6502::Cpu6502(PPU::Ppu& ppu)
-	: m_ppu(ppu)
+Cpu6502::Cpu6502(NES::NES& nes)
+	: m_nes(nes)
+	, m_ppu(nes.GetPpu())
 {
 	// Set ourselves into perpetual v-blank mode:
 	//m_ppuStatusReg = static_cast<uint8_t>(PpuStatusFlag::InVBlank);
 }
+
+//Cpu6502::Cpu6502(PPU::Ppu& ppu)
+//	: m_ppu(ppu)
+//{
+//	// Set ourselves into perpetual v-blank mode:
+//	//m_ppuStatusReg = static_cast<uint8_t>(PpuStatusFlag::InVBlank);
+//}
+
 
 void Cpu6502::GenerateNonMaskableInterrupt()
 {
@@ -92,9 +102,13 @@ uint8_t Cpu6502::ReadMemory8(uint16_t offset) const
 			throw std::runtime_error("Unexpected read location");
 		}
 	}
-	else if (offset == 0x4016 || offset == 0x4017)
+	else if (offset == 0x4016)
 	{
-		// REVIEW: Control pad... TODO, ignore for now
+		return m_nes.UseController1().ReadData();
+	}
+	else if (offset == 0x4017)
+	{
+		// REVIEW: Control pad 2... TODO, ignore for now
 		return 0;
 	}
 	else
@@ -179,7 +193,11 @@ void Cpu6502::WriteMemory8(uint16_t offset, uint8_t value)
 		// pAPU Sound / Vertical Clock Signal Register
 		// Ignore for now
 	}
-	else if (offset == 0x4016 || offset == 0x4017)
+	else if (offset == 0x4016)
+	{
+		m_nes.UseController1().WriteData(value);
+	}
+	else if (offset == 0x4017)
 	{
 		// REVIEW: Control pad... TODO, ignore for now
 	}

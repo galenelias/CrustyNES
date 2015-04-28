@@ -3,6 +3,7 @@
 #include "NESRom.h"
 #include "Ppu.h"
 #include "Cpu6502.h"
+#include "Controller.h"
 
 namespace NES
 {
@@ -23,12 +24,16 @@ public:
 	CPU::Cpu6502& GetCpu() { return m_cpu; }
 	PPU::Ppu& GetPpu() { return m_ppu; }
 
+	Controller& UseController1() { return m_controller1; }
+	//void SetController1Status(ControllerInput input, bool isPressed);
+
 private:
 	int m_cyclesRan = 0;
 
 	NESRom m_rom;
 	PPU::Ppu m_ppu;
 	CPU::Cpu6502 m_cpu;
+	Controller m_controller1;
 };
 
 }
