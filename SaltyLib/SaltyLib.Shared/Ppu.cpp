@@ -115,6 +115,16 @@ void Ppu::WriteOamAddress(uint8_t value)
 	m_cpuOamAddr = value;
 }
 
+void Ppu::WriteOamData(uint8_t value)
+{
+	m_sprRam[m_cpuOamAddr++] = value;
+}
+
+uint8_t Ppu::ReadOamData() const
+{
+	return m_sprRam[m_cpuOamAddr];
+}
+
 void Ppu::TriggerOamDMA(uint8_t* pData)
 {
 	// REVIEW: account for cycles taken: (513 or 514)
@@ -138,7 +148,16 @@ void Ppu::WriteMemory8(uint16_t offset, uint8_t value)
 void Ppu::WriteControlRegister1(uint8_t value)
 {
 	m_ppuCtrl1 = value;
+
+	UpdateStatusWithLastWrittenRegister(value);
 }
+
+void Ppu::UpdateStatusWithLastWrittenRegister(uint8_t value)
+{
+	// The lower 5 bits of the status flag are unused, so will reflect that bits last written to the PPU over the internal data bus
+	m_ppuStatus = (value & 0x1F) || (m_ppuStatus & 0xE0);
+}
+
 
 void Ppu::WriteControlRegister2(uint8_t value)
 {

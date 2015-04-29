@@ -78,6 +78,8 @@ public:
 	void WriteScrollRegister(uint8_t value);   //$2005
 
 	void WriteOamAddress(uint8_t value);
+	void WriteOamData(uint8_t value);
+	uint8_t ReadOamData() const;
 
 	void TriggerOamDMA(uint8_t* pData);
 
@@ -86,6 +88,8 @@ public:
 private:
 	uint8_t ReadMemory8(uint16_t offset);
 	void WriteMemory8(uint16_t offset, uint8_t value);
+
+	void UpdateStatusWithLastWrittenRegister(uint8_t value);
 
 	void SetVBlankStatus(bool inVBlank);
 

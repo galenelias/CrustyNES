@@ -89,6 +89,10 @@ uint8_t Cpu6502::ReadMemory8(uint16_t offset) const
 		{
 			return m_ppu.ReadPpuStatus();
 		}
+		else if (mappedOffset == 0x2004)
+		{
+			return m_ppu.ReadOamData();
+		}
 		else if (mappedOffset == 0x2005 || mappedOffset == 0x2006)
 		{
 			throw std::runtime_error("Unexpected read of VRAM Address register");
@@ -144,6 +148,10 @@ void Cpu6502::WriteMemory8(uint16_t offset, uint8_t value)
 		else if (mappedOffset == 0x2003)
 		{
 			m_ppu.WriteOamAddress(value);
+		}
+		else if (mappedOffset == 0x2004)
+		{
+			m_ppu.WriteOamData(value);
 		}
 		else if (mappedOffset == 0x2005)
 		{
@@ -542,7 +550,7 @@ std::string Cpu6502::GetDebugState() const
 	const uint8_t instruction = ReadMemory8(m_pc);
 
 	char szDebugState[128];
-	sprintf_s(szDebugState, _countof(szDebugState), "%04hX  %02hhX   A:%02hhX  X:%02hhX  Y:%02hhX  P:%02hhX  SP:%02hhX", m_pc, instruction,
+	sprintf_s(szDebugState, _countof(szDebugState), "%04hX  %02hhX A:%02hhX X:%02hhX Y:%02hhX P:%02hhX SP:%02hhX", m_pc, instruction,
 		m_acc, m_x, m_y, m_status, m_sp);
 
 	return std::string(szDebugState);
@@ -575,7 +583,8 @@ void Cpu6502::AddWithCarry(uint8_t x, uint8_t y)
 	const bool isCarryBitSet = ((m_status & static_cast<uint8_t>(CpuStatusFlag::Carry)) != 0);
 
 	// Check for overflow by performing wide math
-	int wideResult = static_cast<int>(signedX) + static_cast<int>(signedY) + (isCarryBitSet ? 1 : 0);
+	int wideSignedResult = static_cast<int>(signedX) + static_cast<int>(signedY) + (isCarryBitSet ? 1 : 0);
+	unsigned int wideUnsignedResult = static_cast<unsigned int>(x) + static_cast<unsigned int>(y) + (isCarryBitSet ? 1 : 0);
 
 	// Calculate the actual result by performing 8-bit addition
 	uint8_t result = x + y + (isCarryBitSet ? 1 : 0);
@@ -583,14 +592,14 @@ void Cpu6502::AddWithCarry(uint8_t x, uint8_t y)
 	
 	CpuStatusFlag newStatusFlags = CpuStatusFlag::None;
 
-	if (wideResult < -128 || wideResult > 127) // Signed overflow
+	if (wideSignedResult < -128 || wideSignedResult > 127) // Signed overflow
 		newStatusFlags |= CpuStatusFlag::Overflow;
 	if (IsNegative(result))
 		newStatusFlags |= CpuStatusFlag::Negative;
 	if (result == 0)
 		newStatusFlags |= CpuStatusFlag::Zero;
 
-	if (wideResult < -128 || ((signedX < 0 || signedY < 0) && wideResult >= 0))
+	if (wideUnsignedResult >= 256)
 	{
 		// Carry happens if two negative numbers go super negative, or if a negative number and a positive become positive
 		newStatusFlags |= CpuStatusFlag::Carry;
