@@ -44,7 +44,7 @@ protected:
 	BITMAPINFO m_nesRenderBitmapInfo;
 
 	//std::wostringstream m_debugOutput;
-	bool m_loggingEnabled = true;
+	bool m_loggingEnabled = false;
 	std::ofstream m_debugFileOutput;
 
 	void SetupRenderBitmap();
