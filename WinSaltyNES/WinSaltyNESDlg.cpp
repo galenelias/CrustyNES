@@ -15,6 +15,8 @@
 #include <Shlobj.h>
 #include <stdexcept>
 
+#include <xaudio2.h>
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -46,6 +48,11 @@ public:
 
 		if (!succeeded || cbBytesRead != cbRead)
 			throw std::runtime_error("File Read fatal error");
+	}
+
+	bool IsValid() const
+	{
+		return (m_hFile != INVALID_HANDLE_VALUE);
 	}
 
 private:
@@ -145,7 +152,7 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-	//OpenRomFile(L"C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes");
+	OpenRomFile(L"C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes");
 	SetupRenderBitmap();
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
@@ -178,6 +185,9 @@ std::wstring CWinSaltyNESDlg::PickRomFile()
 void CWinSaltyNESDlg::OpenRomFile(LPCWSTR pwzRomFile)
 {
 	CWin32ReadOnlyFile romFile(pwzRomFile);
+
+	if (!romFile.IsValid())
+		return;
 
 	m_nes.LoadRomFile(&romFile);
 	m_nes.Reset();
@@ -358,9 +368,69 @@ void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 	SetDlgItemTextW(IDC_PROGRAM_COUNTER, wzProgramCounter);
 }
 
+void CWinSaltyNESDlg::PlayRandomAudio()
+{
+	HRESULT hr = S_OK;
+	IXAudio2* pXAudio = nullptr;
+	IXAudio2MasteringVoice * pMasteringVoice;
+	IXAudio2SourceVoice * pSourceVoice;
+	byte soundData[5 * 2 * 44100];
+	CoInitializeEx(NULL, COINIT_MULTITHREADED);
+	//create the engine
+	if (FAILED(XAudio2Create(&pXAudio)))
+		return;
+
+	hr = pXAudio->CreateMasteringVoice(&pMasteringVoice);
+
+	// Create a source voice
+	WAVEFORMATEX waveformat;
+	waveformat.wFormatTag = WAVE_FORMAT_PCM;
+	waveformat.nChannels = 1;
+	waveformat.nSamplesPerSec = 44100;
+	waveformat.nAvgBytesPerSec = 44100 * 2;
+	waveformat.nBlockAlign = 2;
+	waveformat.wBitsPerSample = 16;
+	waveformat.cbSize = 0;
+	hr = pXAudio->CreateSourceVoice(&pSourceVoice, &waveformat);
+	if (FAILED(hr))
+		return;
+
+	// Start the source voice
+	hr = pSourceVoice->Start();
+	if (FAILED(hr))
+		return;
+
+	// Fill the array with sound data
+	for (int index = 0, second = 0; second < 5; second++)
+	{
+		for (int cycle = 0; cycle < 441; cycle++)
+		{
+			for (int sample = 0; sample < 100; sample++)
+			{
+				short value = sample < 50 ? 32767 : -32768;
+				soundData[index++] = value & 0xFF;
+				soundData[index++] = (value >> 8) & 0xFF;
+			}
+		}
+	}
+
+	// Create a button to reference the byte array
+	XAUDIO2_BUFFER buffer = { 0 };
+	buffer.AudioBytes = 2 * 5 * 44100;
+	buffer.pAudioData = soundData;
+	buffer.Flags = XAUDIO2_END_OF_STREAM;
+	buffer.PlayBegin = 0;
+	buffer.PlayLength = 1 * 44100;
+	// Submit the buffer
+	hr = pSourceVoice->SubmitSourceBuffer(&buffer);
+	if (FAILED(hr))
+		return;
+}
 
 void CWinSaltyNESDlg::OnBnClickedOpenRom()
 {
+	PlayRandomAudio();
+
 	std::wstring romFileName = PickRomFile();
 
 	if (!romFileName.empty())

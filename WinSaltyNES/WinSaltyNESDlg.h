@@ -62,6 +62,8 @@ private:
 	void IncrementFrameCount(bool shouldUpdateFpsCounter);
 	void PaintNESFrame(CDC* pDC);
 
+	void PlayRandomAudio();
+
 	NES::NES m_nes;
 	enum class NESRunMode
 	{
