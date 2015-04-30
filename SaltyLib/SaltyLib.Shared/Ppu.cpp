@@ -168,8 +168,7 @@ void Ppu::WriteControlRegister2(uint8_t value)
 void Ppu::DoStuff()
 {
 	// We are going to do approximately ~3 cycles worth of work per 'DoStuff', which is 9 pixels of processing
-	//m_pixel += 12;
-	m_pixel += 25;
+	m_pixel += 9;
 	if (m_pixel >= c_pixelsPerScanlines)
 	{
 		m_pixel %= c_pixelsPerScanlines;
