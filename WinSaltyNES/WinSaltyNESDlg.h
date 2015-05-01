@@ -62,7 +62,7 @@ private:
 	void IncrementFrameCount(bool shouldUpdateFpsCounter);
 	void PaintNESFrame(CDC* pDC);
 
-	void PlayRandomAudio();
+	void PlayRandomAudio(int hz);
 
 	NES::NES m_nes;
 	enum class NESRunMode
@@ -85,4 +85,5 @@ public:
 	afx_msg LRESULT OnFramePulse(WPARAM wParam, LPARAM lParam);
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+	afx_msg void OnBnClickedPlayMusic();
 };

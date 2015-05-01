@@ -118,6 +118,7 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_MESSAGE(WMU_FRAME_PULSE, &CWinSaltyNESDlg::OnFramePulse)
 	ON_WM_ERASEBKGND()
 	ON_WM_TIMER()
+	ON_BN_CLICKED(IDC_PLAY_MUSIC, &CWinSaltyNESDlg::OnBnClickedPlayMusic)
 END_MESSAGE_MAP()
 
 
@@ -368,7 +369,7 @@ void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 	SetDlgItemTextW(IDC_PROGRAM_COUNTER, wzProgramCounter);
 }
 
-void CWinSaltyNESDlg::PlayRandomAudio()
+void CWinSaltyNESDlg::PlayRandomAudio(int hz)
 {
 	HRESULT hr = S_OK;
 	IXAudio2* pXAudio = nullptr;
@@ -400,14 +401,17 @@ void CWinSaltyNESDlg::PlayRandomAudio()
 	if (FAILED(hr))
 		return;
 
+	int c_wavesPerSec = hz;
+	int c_samplesPerWave = waveformat.nSamplesPerSec / c_wavesPerSec;
+
 	// Fill the array with sound data
 	for (int index = 0, second = 0; second < 5; second++)
 	{
-		for (int cycle = 0; cycle < 441; cycle++)
+		for (int cycle = 0; cycle < c_wavesPerSec; cycle++)
 		{
-			for (int sample = 0; sample < 100; sample++)
+			for (int sample = 0; sample < c_samplesPerWave; sample++)
 			{
-				short value = sample < 50 ? 32767 : -32768;
+				short value = sample < (c_samplesPerWave / 2) ? 32767 : -32768;
 				soundData[index++] = value & 0xFF;
 				soundData[index++] = (value >> 8) & 0xFF;
 			}
@@ -429,8 +433,6 @@ void CWinSaltyNESDlg::PlayRandomAudio()
 
 void CWinSaltyNESDlg::OnBnClickedOpenRom()
 {
-	PlayRandomAudio();
-
 	std::wstring romFileName = PickRomFile();
 
 	if (!romFileName.empty())
@@ -578,3 +580,14 @@ BOOL CWinSaltyNESDlg::PreTranslateMessage(MSG* pMsg)
 }
 
 
+
+
+void CWinSaltyNESDlg::OnBnClickedPlayMusic()
+{
+	CStringW strHz;
+	GetDlgItemTextW(IDC_EDIT_WAVE_HZ, strHz);
+
+	int hz = wcstol((LPCWSTR)strHz, nullptr, 10);
+
+	PlayRandomAudio(hz);
+}
