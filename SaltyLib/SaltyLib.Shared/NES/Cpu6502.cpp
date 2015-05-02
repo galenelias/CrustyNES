@@ -172,6 +172,8 @@ void Cpu6502::WriteMemory8(uint16_t offset, uint8_t value)
 	}
 	else if (offset >= 0x4000 && offset < 0x4014)
 	{
+		int x = offset;
+		x++;
 		// APU - ignore for now
 	}
 	else if (offset == 0x4014)
