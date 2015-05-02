@@ -7,11 +7,21 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)CoreUtils.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Stopwatch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)MovingAverage.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)NES\Controller.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)NES\Cpu6502.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)NES\NES.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)NES\NESRom.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)NES\Ppu.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\Controller.h">
+      <Filter>NES</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\Cpu6502.h">
+      <Filter>NES</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\NES.h">
+      <Filter>NES</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\NESRom.h">
+      <Filter>NES</Filter>
+    </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\Ppu.h">
+      <Filter>NES</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
@@ -20,10 +30,25 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)SaltyLib.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Stopwatch.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)MovingAverage.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Controller.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Cpu6502.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)NES\NES.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)NES\NESRom.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Ppu.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Controller.cpp">
+      <Filter>NES</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Cpu6502.cpp">
+      <Filter>NES</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\NES.cpp">
+      <Filter>NES</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\NESRom.cpp">
+      <Filter>NES</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Ppu.cpp">
+      <Filter>NES</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="NES">
+      <UniqueIdentifier>{691bde27-b021-4832-bfaa-b075c84c217e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
