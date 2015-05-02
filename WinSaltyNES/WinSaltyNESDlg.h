@@ -7,7 +7,7 @@
 #include <sstream>
 #include <fstream>
 
-#include "NES.h"
+#include "NES/NES.h"
 #include "MovingAverage.h"
 #include "Stopwatch.h"
 

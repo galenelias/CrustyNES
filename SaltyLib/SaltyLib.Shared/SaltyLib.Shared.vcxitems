@@ -14,25 +14,25 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Controller.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)CoreUtils.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Cpu6502.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)MovingAverage.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)NES.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)NESRom.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)Ppu.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\Controller.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\Cpu6502.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\NES.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\NESRom.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\Ppu.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)SaltyLib.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Stopwatch.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)targetver.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(MSBuildThisFileDirectory)Controller.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Cpu6502.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)MovingAverage.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)NES.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)NESRom.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)Ppu.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Controller.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Cpu6502.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\NES.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\NESRom.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Ppu.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)SaltyLib.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

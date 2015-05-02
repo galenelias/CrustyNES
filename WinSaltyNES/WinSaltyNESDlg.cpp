@@ -7,9 +7,9 @@
 #include "WinSaltyNESDlg.h"
 #include "afxdialogex.h"
 
-#include "NESRom.h"
-#include "Ppu.h"
-#include "Cpu6502.h"
+#include "NES/NESRom.h"
+#include "NES/Ppu.h"
+#include "NES/Cpu6502.h"
 #include "Stopwatch.h"
 
 #include <Shlobj.h>
@@ -396,6 +396,7 @@ void CWinSaltyNESDlg::PlayRandomAudio(int hz)
 	if (FAILED(hr))
 		return;
 
+	pSourceVoice->SetVolume(0.1);
 	// Start the source voice
 	hr = pSourceVoice->Start();
 	if (FAILED(hr))
