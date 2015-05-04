@@ -141,7 +141,7 @@ void XAudioSource::Initialize(IXAudio2* pXAudio)
 void XAudioSource::SetChannelData(const uint8_t* pData, size_t cbData, bool /*shouldLoop*/)
 {
 	XAUDIO2_BUFFER buffer = { 0 };
-	buffer.AudioBytes = cbData;
+	buffer.AudioBytes = static_cast<uint32_t>(cbData);
 	buffer.pAudioData = reinterpret_cast<const BYTE*>(pData);
 	buffer.Flags = XAUDIO2_END_OF_STREAM;
 	buffer.PlayBegin = 0;
