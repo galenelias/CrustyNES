@@ -65,7 +65,6 @@ public:
 
 	void DoStuff();
 	bool ShouldRender();
-	//void RenderWin32(HDC hdc, const RECT bounds);
 	void RenderToBuffer(ppuDisplayBuffer_t displayBuffer);
 
 	void WriteControlRegister1(uint8_t value); // $2000
@@ -82,8 +81,6 @@ public:
 	uint8_t ReadOamData() const;
 
 	void TriggerOamDMA(uint8_t* pData);
-
-	//uint8_t ReadCpuDataRegister();
 
 private:
 	uint8_t ReadMemory8(uint16_t offset);

@@ -25,16 +25,7 @@ Cpu6502::Cpu6502(NES::NES& nes)
 	, m_ppu(nes.GetPpu())
 	, m_apu(nes.GetApu())
 {
-	// Set ourselves into perpetual v-blank mode:
-	//m_ppuStatusReg = static_cast<uint8_t>(PpuStatusFlag::InVBlank);
 }
-
-//Cpu6502::Cpu6502(PPU::Ppu& ppu)
-//	: m_ppu(ppu)
-//{
-//	// Set ourselves into perpetual v-blank mode:
-//	//m_ppuStatusReg = static_cast<uint8_t>(PpuStatusFlag::InVBlank);
-//}
 
 
 void Cpu6502::GenerateNonMaskableInterrupt()
@@ -214,9 +205,6 @@ void Cpu6502::WriteMemory8(uint16_t offset, uint8_t value)
 	{
 		throw std::runtime_error("Not handled yet");
 	}
-
-	//byte* pWritableMemory = MapWritableMemoryOffset(offset);
-	//*pWritableMemory = val;
 }
 
 uint16_t Cpu6502::ReadMemory16(uint16_t offset) const

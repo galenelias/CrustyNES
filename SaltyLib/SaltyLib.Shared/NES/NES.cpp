@@ -10,11 +10,6 @@ NES::NES()
 {
 }
 
-
-NES::~NES()
-{
-}
-
 void NES::RunCycle()
 {
 	m_cyclesRan++;
@@ -44,12 +39,5 @@ void NES::Reset()
 	m_cpu.Reset();
 	//m_ppu.Reset() // ?
 }
-
-//void NES::SetController1Status(ControllerInput input, bool isPressed)
-//{
-//	m_controller1.SetInputStatus(input, isPressed);
-//}
-
-
 
 }

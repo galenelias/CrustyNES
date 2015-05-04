@@ -95,10 +95,7 @@ class Apu
 public:
 	Apu();
 
-	//Apu(const std::shared_ptr<IAudioDevice>& spAudioDevice);
-
 	void WriteMemory8(uint16_t offset, uint8_t value);
-
 
 private:
 	void SetPulseWaveParameters(uint16_t offset, uint8_t value, _Inout_ PulseWaveParameters *pPulseWaveParameters);
@@ -106,9 +103,6 @@ private:
 
 	void GeneratePulseWaveAudioSourceData(const PulseWaveParameters& params, size_t *pCbAudioData, std::unique_ptr<uint8_t[]> *pAudioDataSmartPtr, IAudioSource* pAudioSource);
 	void GenerateTriangleWaveAudioSourceData(const TriangleWaveParameters& params, size_t *pCbAudioData, std::unique_ptr<uint8_t[]> *pAudioDataSmartPtr, IAudioSource* pAudioSource);
-
-	//void GeneratePulseWaveAudioSourceData(const PulseWaveParameters& params, size_t *pCbAudioData, std::unique_ptr<uint8_t[]> *pAudioDataSmartPtr, IAudioSource* pAudioSource);
-	//void GeneratePulseWaveAudioSourceData(const PulseWaveParameters& params, size_t *pCbAudioData, std::unique_ptr<uint8_t[]> *pAudioDataSmartPtr, IAudioSource* pAudioSource);
 
 	PulseWaveParameters m_pulseWave1Parameters;
 	PulseWaveParameters m_pulseWave2Parameters;

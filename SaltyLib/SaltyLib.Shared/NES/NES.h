@@ -14,7 +14,6 @@ class NES
 {
 public:
 	NES();
-	~NES();
 
 	void LoadRomFile(IReadableFile* pRomFile);
 	void Reset();
@@ -27,7 +26,6 @@ public:
 	APU::Apu& GetApu() { return m_apu; }
 
 	Controller& UseController1() { return m_controller1; }
-	//void SetController1Status(ControllerInput input, bool isPressed);
 
 private:
 	int m_cyclesRan = 0;

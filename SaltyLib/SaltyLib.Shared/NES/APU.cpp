@@ -138,7 +138,7 @@ void XAudioSource::Initialize(IXAudio2* pXAudio)
 	SetVolume(1.0f);
 
 }
-void XAudioSource::SetChannelData(const uint8_t* pData, size_t cbData, bool shouldLoop)
+void XAudioSource::SetChannelData(const uint8_t* pData, size_t cbData, bool /*shouldLoop*/)
 {
 	XAUDIO2_BUFFER buffer = { 0 };
 	buffer.AudioBytes = cbData;
@@ -155,12 +155,7 @@ void XAudioSource::SetChannelData(const uint8_t* pData, size_t cbData, bool shou
 	XAUDIO2_VOICE_STATE state;
 	m_pXAudioSourceVoice->GetState(&state, 0);
 
-	static bool s_submitOnce = false;
-	//if (s_submitOnce == false)
-	{
-		VerifyHr(m_pXAudioSourceVoice->SubmitSourceBuffer(&buffer));
-		s_submitOnce = true;
-	}
+	VerifyHr(m_pXAudioSourceVoice->SubmitSourceBuffer(&buffer));
 }
 
 void XAudioSource::Play()
@@ -202,7 +197,6 @@ inline int GetPulseFrequencyFromTimerValue(uint32_t timerPeriod)
 }
 
 
-//inline void GeneratePulseWaveAudioSourceData(const PulseWaveParameters& params, IAudioSource* pAudioSource)
 void Apu::GeneratePulseWaveAudioSourceData(const PulseWaveParameters& params, size_t *pCbAudioData, std::unique_ptr<uint8_t[]> *pAudioDataSmartPtr, IAudioSource* pAudioSource)
 {
 	int timerPeriod = params.Bytes3and4.RawPeriod;
@@ -276,18 +270,17 @@ void Apu::GenerateTriangleWaveAudioSourceData(const TriangleWaveParameters& para
 	}
 
 	int16_t* pSampleData = reinterpret_cast<int16_t*>((*pAudioDataSmartPtr).get());
-	const int samplesPerCycleEntry = std::max(1, samplesPerWave / 32);
 	const int samplesPerHalfWave = samplesPerWave / 2;
 	const int valueStepsPerSample = USHRT_MAX / samplesPerHalfWave;
 
 	for (int sample = 0; sample < samplesPerHalfWave; ++sample)
 	{
-		pSampleData[sample] = SHRT_MAX - (sample * valueStepsPerSample);
+		pSampleData[sample] = static_cast<int16_t>(SHRT_MAX - (sample * valueStepsPerSample));
 	}
 
 	for (int sample = samplesPerHalfWave; sample < samplesPerWave; ++sample)
 	{
-		pSampleData[sample] = SHRT_MIN + (sample - samplesPerHalfWave) * valueStepsPerSample;
+		pSampleData[sample] = static_cast<int16_t>(SHRT_MIN + (sample - samplesPerHalfWave) * valueStepsPerSample);
 	}
 
 	pAudioSource->SetChannelData((*pAudioDataSmartPtr).get(), cbSampleData, true /*shouldLoop*/);
@@ -316,21 +309,11 @@ void Apu::WriteMemory8(uint16_t offset, uint8_t value)
 void Apu::SetPulseWaveParameters(uint16_t offset, uint8_t value, _Inout_ PulseWaveParameters *pPulseWaveParameters)
 {
 	if (offset == 0)
-	{
-		// Pulse wave 1 duty cycle / volume (%DD11VVVV)
 		pPulseWaveParameters->Byte1.ByteValue = value;
-	}
 	else if (offset == 2)
-	{
-		// Pulse wave 1 period low bits
 		pPulseWaveParameters->Bytes3and4.Byte3Value = value;
-
-	}
 	else if (offset == 3)
-	{
-		// Pulse wave 1 period high bits
 		pPulseWaveParameters->Bytes3and4.Byte4Value = value;
-	}
 }
 
 

@@ -234,8 +234,8 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 		{
 			const uint8_t colorByte1 = m_vram[tileOffsetBase + iPixelRow];
 			const uint8_t colorByte2 = m_vram[tileOffsetBase + iPixelRow + 8];
-			const int lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
-										 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
+			const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
+											 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
 		
 			const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
 			const uint8_t colorDataOffset = m_vram[c_paletteBkgOffset + fullPixelBytes];
@@ -262,8 +262,8 @@ void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 		{
 			const uint8_t colorByte1 = m_vram[tileOffsetBase + iPixelRow];
 			const uint8_t colorByte2 = m_vram[tileOffsetBase + iPixelRow + 8];
-			const int lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
-										 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
+			const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
+											 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
 		
 			const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
 			const uint8_t colorDataOffset = m_vram[c_paletteSprOffset + fullPixelBytes];

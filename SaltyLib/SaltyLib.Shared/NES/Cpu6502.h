@@ -183,7 +183,6 @@ class Cpu6502
 {
 public:
 	Cpu6502(NES::NES& nes); //REVIEW: Should cpu depend on ram, or abstract the PRG/CHR loading?
-	//Cpu6502(PPU::Ppu& ppu); //REVIEW: Should cpu depend on ram, or abstract the PRG/CHR loading?
 	Cpu6502(const Cpu6502&) = delete;
 	Cpu6502& operator=(const Cpu6502&) = delete;
 

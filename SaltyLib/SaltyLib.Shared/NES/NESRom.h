@@ -44,11 +44,7 @@ private:
 	byte m_Flags9;
 	byte m_Flags10;
 
-	//enum class Flags6Values : byte
-	//{
-	//	VerticalMirroring = 0x01,
-	//	HorizontalMirroring = 0x
-	//};
+
 
 };
 

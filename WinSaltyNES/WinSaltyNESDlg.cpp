@@ -22,9 +22,6 @@
 #endif
 
 
-//#define WMU_FRAME_PULSE ()
-const DWORD WMU_FRAME_PULSE = WM_USER + 1;
-
 const DWORD TIMER_REDRAW = 0;
 
 class CWin32ReadOnlyFile : public IReadableFile
@@ -115,7 +112,6 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_OPEN_ROM, &CWinSaltyNESDlg::OnBnClickedOpenRom)
 	ON_BN_CLICKED(IDC_RUN_CYCLES, &CWinSaltyNESDlg::OnBnClickedRunCycles)
 	ON_BN_CLICKED(IDC_RUN_INFINITE, &CWinSaltyNESDlg::OnBnClickedRunInfinite)
-	ON_MESSAGE(WMU_FRAME_PULSE, &CWinSaltyNESDlg::OnFramePulse)
 	ON_WM_ERASEBKGND()
 	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_PLAY_MUSIC, &CWinSaltyNESDlg::OnBnClickedPlayMusic)
@@ -450,7 +446,6 @@ void CWinSaltyNESDlg::OnBnClickedRunInfinite()
 	{
 		m_runMode = NESRunMode::Continuous;
 		m_frameStopwatch.Start();
-		//PostMessage(WMU_FRAME_PULSE, 0, 0);
 		SetTimer(TIMER_REDRAW, 0, nullptr);
 	}
 	else
@@ -460,16 +455,6 @@ void CWinSaltyNESDlg::OnBnClickedRunInfinite()
 	}
 }
 
-
-LRESULT CWinSaltyNESDlg::OnFramePulse(WPARAM /*wParam*/, LPARAM /*lParam*/)
-{
-	RenderFrame();
-
-	//if (m_runMode == NESRunMode::Continuous)
-	//	PostMessage(WMU_FRAME_PULSE, 0, 0);
-
-	return 0;
-}
 
 void CWinSaltyNESDlg::RenderFrame()
 {
