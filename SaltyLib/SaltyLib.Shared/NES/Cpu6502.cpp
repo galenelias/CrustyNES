@@ -23,6 +23,7 @@ enum BranchFlagSelector
 Cpu6502::Cpu6502(NES::NES& nes)
 	: m_nes(nes)
 	, m_ppu(nes.GetPpu())
+	, m_apu(nes.GetApu())
 {
 	// Set ourselves into perpetual v-blank mode:
 	//m_ppuStatusReg = static_cast<uint8_t>(PpuStatusFlag::InVBlank);
@@ -97,7 +98,7 @@ uint8_t Cpu6502::ReadMemory8(uint16_t offset) const
 		{
 			throw std::runtime_error("Unexpected read of VRAM Address register");
 		}
-		else if (mappedOffset = 0x2007)
+		else if (mappedOffset == 0x2007)
 		{
 			return m_ppu.ReadCpuDataRegister();
 		}
@@ -172,9 +173,7 @@ void Cpu6502::WriteMemory8(uint16_t offset, uint8_t value)
 	}
 	else if (offset >= 0x4000 && offset < 0x4014)
 	{
-		int x = offset;
-		x++;
-		// APU - ignore for now
+		m_apu.WriteMemory8(offset, value);
 	}
 	else if (offset == 0x4014)
 	{

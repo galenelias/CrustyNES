@@ -277,29 +277,6 @@ void CWinSaltyNESDlg::OnPaint()
 	else
 	{
 		CDialogEx::OnPaint();
-
-		//if (m_runMode == NESRunMode::Continuous)
-		//{
-		//	for (;;)
-		//	{
-		//		m_nes.RunCycle();
-
-		//		if (m_nes.GetPpu().ShouldRender())
-		//		{
-		//			CPaintDC dcPaint(this);
-		//			PaintNESFrame(&dcPaint);
-		//			break;
-		//		}
-		//	}
-
-		//	IncrementFrameCount();
-
-		//	CDialogEx::OnPaint();
-		//}
-		//else
-		//{
-		//	CDialogEx::OnPaint();
-		//}
 	}
 }
 
@@ -372,41 +349,57 @@ void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 void CWinSaltyNESDlg::PlayRandomAudio(int hz)
 {
 	HRESULT hr = S_OK;
-	IXAudio2* pXAudio = nullptr;
-	IXAudio2MasteringVoice * pMasteringVoice;
-	IXAudio2SourceVoice * pSourceVoice;
-	byte soundData[5 * 2 * 44100];
-	CoInitializeEx(NULL, COINIT_MULTITHREADED);
-	//create the engine
-	if (FAILED(XAudio2Create(&pXAudio)))
-		return;
 
-	hr = pXAudio->CreateMasteringVoice(&pMasteringVoice);
+	if (m_pXAudio == nullptr)
+	{
+		IXAudio2MasteringVoice * pMasteringVoice;
+		CoInitializeEx(NULL, COINIT_MULTITHREADED);
+		//create the engine
+		if (FAILED(XAudio2Create(&m_pXAudio)))
+			return;
 
-	// Create a source voice
-	WAVEFORMATEX waveformat;
-	waveformat.wFormatTag = WAVE_FORMAT_PCM;
-	waveformat.nChannels = 1;
-	waveformat.nSamplesPerSec = 44100;
-	waveformat.nAvgBytesPerSec = 44100 * 2;
-	waveformat.nBlockAlign = 2;
-	waveformat.wBitsPerSample = 16;
-	waveformat.cbSize = 0;
-	hr = pXAudio->CreateSourceVoice(&pSourceVoice, &waveformat);
+		hr = m_pXAudio->CreateMasteringVoice(&pMasteringVoice);
+		if (FAILED(hr))
+			return;
+	}
+
+	const int c_samplesPerSecond = 44100;
+	const int c_bytesPerSample = 2;
+
+	byte soundData[2 * c_samplesPerSecond];
+
+	if (m_pSourceVoice == nullptr)
+	{
+		// Create a source voice
+		WAVEFORMATEX waveformat;
+		waveformat.wFormatTag = WAVE_FORMAT_PCM;
+		waveformat.nChannels = 1;
+		waveformat.nSamplesPerSec = c_samplesPerSecond;
+		waveformat.nAvgBytesPerSec = c_samplesPerSecond * c_bytesPerSample;
+		waveformat.nBlockAlign = c_bytesPerSample;
+		waveformat.wBitsPerSample = c_bytesPerSample * 8;
+		waveformat.cbSize = 0;
+		hr = m_pXAudio->CreateSourceVoice(&m_pSourceVoice, &waveformat);
+		if (FAILED(hr))
+			return;
+
+		m_pSourceVoice->SetVolume(0.1f);
+	}
+
+	// Start the source voice
+	hr = m_pSourceVoice->Stop();
 	if (FAILED(hr))
 		return;
 
-	pSourceVoice->SetVolume(0.1);
-	// Start the source voice
-	hr = pSourceVoice->Start();
+	hr = m_pSourceVoice->Start();
 	if (FAILED(hr))
 		return;
 
 	int c_wavesPerSec = hz;
-	int c_samplesPerWave = waveformat.nSamplesPerSec / c_wavesPerSec;
+	int c_samplesPerWave = 44100 / c_wavesPerSec;
 
 	// Fill the array with sound data
-	for (int index = 0, second = 0; second < 5; second++)
+	for (int index = 0, second = 0; second < 1; second++)
 	{
 		for (int cycle = 0; cycle < c_wavesPerSec; cycle++)
 		{
@@ -421,13 +414,14 @@ void CWinSaltyNESDlg::PlayRandomAudio(int hz)
 
 	// Create a button to reference the byte array
 	XAUDIO2_BUFFER buffer = { 0 };
-	buffer.AudioBytes = 2 * 5 * 44100;
+	buffer.AudioBytes = c_samplesPerWave * c_bytesPerSample;
 	buffer.pAudioData = soundData;
 	buffer.Flags = XAUDIO2_END_OF_STREAM;
 	buffer.PlayBegin = 0;
-	buffer.PlayLength = 1 * 44100;
+	buffer.PlayLength = 0;
+	buffer.LoopCount = XAUDIO2_LOOP_INFINITE;
 	// Submit the buffer
-	hr = pSourceVoice->SubmitSourceBuffer(&buffer);
+	hr = m_pSourceVoice->SubmitSourceBuffer(&buffer);
 	if (FAILED(hr))
 		return;
 }

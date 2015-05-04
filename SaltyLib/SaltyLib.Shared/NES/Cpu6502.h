@@ -14,6 +14,11 @@ namespace PPU
 namespace NES
 {
 	class NES;
+
+	namespace APU
+	{
+		class Apu;
+	}
 }
 
 namespace CPU
@@ -237,6 +242,7 @@ private:
 
 	NES::NES& m_nes;
 	PPU::Ppu& m_ppu;
+	NES::APU::Apu& m_apu;
 
 	// PPU stuff
 	uint8_t m_ppuCtrlReg1;

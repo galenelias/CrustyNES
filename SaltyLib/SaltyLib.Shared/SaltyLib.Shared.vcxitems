@@ -16,6 +16,7 @@
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)CoreUtils.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)MovingAverage.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\APU.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NES\Controller.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NES\Cpu6502.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NES\NES.h" />
@@ -28,6 +29,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)MovingAverage.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\APU.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\Controller.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\Cpu6502.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\NES.cpp" />

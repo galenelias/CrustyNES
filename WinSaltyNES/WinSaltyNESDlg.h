@@ -10,6 +10,7 @@
 #include "NES/NES.h"
 #include "MovingAverage.h"
 #include "Stopwatch.h"
+#include <xaudio2.h>
 
 // CWinSaltyNESDlg dialog
 class CWinSaltyNESDlg : public CDialogEx
@@ -76,6 +77,9 @@ private:
 
 	MovingAverage<LONGLONG, 30> m_fpsAverage;
 	Stopwatch m_frameStopwatch;
+
+	IXAudio2* m_pXAudio = nullptr;
+	IXAudio2SourceVoice* m_pSourceVoice;
 
 public:
 	afx_msg void OnBnClickedButton1();
