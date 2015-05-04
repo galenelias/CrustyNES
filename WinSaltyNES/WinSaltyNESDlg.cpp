@@ -38,7 +38,7 @@ public:
 		CloseHandle(m_hFile);
 	}
 
-	virtual void Read(size_t cbRead, _Out_writes_bytes_(cbRead) byte* pBuffer) override
+	virtual void Read(uint32_t cbRead, _Out_writes_bytes_(cbRead) byte* pBuffer) override
 	{
 		DWORD cbBytesRead = 0;
 		BOOL succeeded = ReadFile(m_hFile, pBuffer, cbRead, &cbBytesRead, nullptr);
@@ -517,7 +517,7 @@ void CWinSaltyNESDlg::OnTimer(UINT_PTR nIDEvent)
 }
 
 
-NES::ControllerInput MapVirtualKeyToNesInput(DWORD vkey)
+NES::ControllerInput MapVirtualKeyToNesInput(WPARAM vkey)
 {
 	switch (vkey)
 	{

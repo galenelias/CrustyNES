@@ -11,7 +11,7 @@ class IReadableFile
 {
 public:
 	virtual ~IReadableFile() {}
-	virtual void Read(size_t cbRead, _Out_writes_bytes_(cbRead) byte* pBuffer) = 0;
+	virtual void Read(uint32_t cbRead, _Out_writes_bytes_(cbRead) byte* pBuffer) = 0;
 
 };
 
@@ -52,9 +52,6 @@ private:
 class NESRom
 {
 public:
-	NESRom();
-	~NESRom();
-
 	void LoadRomFromFile(IReadableFile* pRomFile);
 
 	uint16_t GetCbPrgRom() const;

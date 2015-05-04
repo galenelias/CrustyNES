@@ -63,19 +63,6 @@ PPU::MirroringMode NESROMHeader::GetMirroringMode() const
 		return PPU::MirroringMode::FourScreen;
 }
 
-
-
-NESRom::NESRom()
-{
-
-}
-
-NESRom::~NESRom()
-{
-}
-
-
-
 void NESRom::LoadRomFromFile(IReadableFile* pRomFile)
 {
 	m_header.LoadFromFile(pRomFile);
