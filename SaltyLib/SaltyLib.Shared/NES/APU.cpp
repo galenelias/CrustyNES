@@ -146,7 +146,7 @@ void XAudioSource::SetChannelData(const uint8_t* pData, size_t cbData, bool /*sh
 	buffer.Flags = XAUDIO2_END_OF_STREAM;
 	buffer.PlayBegin = 0;
 	buffer.PlayLength = 0;
-	buffer.LoopCount = XAUDIO2_LOOP_INFINITE;
+	buffer.LoopCount = 200; // TODO: Real sample length
 
 	m_pXAudioSourceVoice->ExitLoop();
 	m_pXAudioSourceVoice->Stop();
