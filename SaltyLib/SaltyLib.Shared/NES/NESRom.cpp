@@ -72,7 +72,7 @@ void NESRom::LoadRomFromFile(IReadableFile* pRomFile)
 
 	const byte mapperNum = m_header.MapperNumber();
 
-	if (mapperNum != 0)
+	if (mapperNum != 0 && mapperNum != 1)
 		throw UnsupportedRomException("Unsupported Mapper");
 
 	const auto cbPrgRomData = m_header.CbPrgRomData();
@@ -86,6 +86,11 @@ void NESRom::LoadRomFromFile(IReadableFile* pRomFile)
 		pRomFile->Read(cbChrRomData, m_chrRomData.get());
 	}
 		
+}
+
+uint8_t NESRom::GetMapperId() const
+{
+	return m_header.MapperNumber();
 }
 
 

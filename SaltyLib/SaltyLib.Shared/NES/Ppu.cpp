@@ -2,6 +2,7 @@
 #include "Ppu.h"
 #include "NESRom.h"
 #include "Cpu6502.h"
+#include "IMapper.h"
 
 namespace PPU
 {
@@ -36,13 +37,9 @@ Ppu::Ppu(CPU::Cpu6502& cpu)
 }
 
 
-void Ppu::MapRomMemory(const NES::NESRom& rom)
+void Ppu::MapRomMemory(const NES::NESRom& rom, NES::IMapper* pMapper)
 {
-	m_chrRom = rom.GetChrRom();
-
-	// Copy pattern tables into vram
-	memcpy_s(m_vram, _countof(m_vram), m_chrRom, rom.CbChrRomData());
-
+	m_pMapper = pMapper;
 	m_mirroringMode = rom.GetMirroringMode();
 }
 
@@ -134,14 +131,12 @@ void Ppu::TriggerOamDMA(uint8_t* pData)
 
 uint8_t Ppu::ReadMemory8(uint16_t offset)
 {
-	uint16_t effectiveOffset = offset % c_cbVRAM;
-	return m_vram[effectiveOffset];
+	return m_pMapper->ReadChrAddress(offset);
 }
 
 void Ppu::WriteMemory8(uint16_t offset, uint8_t value)
 {
-	uint16_t effectiveOffset = offset % c_cbVRAM;
-	m_vram[effectiveOffset] = value;
+	m_pMapper->WriteChrAddress(offset, value);
 }
 
 
@@ -232,13 +227,13 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 
 		for (int iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
 		{
-			const uint8_t colorByte1 = m_vram[tileOffsetBase + iPixelRow];
-			const uint8_t colorByte2 = m_vram[tileOffsetBase + iPixelRow + 8];
+			const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + iPixelRow);
+			const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + iPixelRow + 8);
 			const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
 											 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
 		
 			const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
-			const uint8_t colorDataOffset = m_vram[c_paletteBkgOffset + fullPixelBytes];
+			const uint8_t colorDataOffset = ReadMemory8(c_paletteBkgOffset + fullPixelBytes);
 
 			displayBuffer[iRow + iPixelRow][iColumn + iPixelColumn] = c_nesRgbColorTable[colorDataOffset];
 			
@@ -260,13 +255,13 @@ void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 
 		for (int iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
 		{
-			const uint8_t colorByte1 = m_vram[tileOffsetBase + iPixelRow];
-			const uint8_t colorByte2 = m_vram[tileOffsetBase + iPixelRow + 8];
+			const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + iPixelRow);
+			const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + iPixelRow + 8);
 			const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
 											 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
 		
 			const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
-			const uint8_t colorDataOffset = m_vram[c_paletteSprOffset + fullPixelBytes];
+			const uint8_t colorDataOffset = ReadMemory8(c_paletteSprOffset + fullPixelBytes);
 
 			const int iPixelRowOffset = flipVertically ? (8 - iPixelRow) : iPixelRow;
 			const int iPixelColumnOffset = flipHorizontally ? (8 - iPixelColumn) : iPixelColumn;
@@ -302,9 +297,9 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 	{
 		for (int iColumn = 0; iColumn != c_columnsPerRow; ++iColumn)
 		{
-			const uint8_t tileNumber = m_vram[nameTableOffset + iRow * c_columnsPerRow + iColumn];
+			const uint8_t tileNumber = ReadMemory8(nameTableOffset + iRow * c_columnsPerRow + iColumn);
 			const uint8_t attributeIndex = static_cast<uint8_t>((iRow / 4) * 8 + (iColumn / 4));
-			const uint8_t attributeData = m_vram[nameTableOffset + (c_rows * c_columnsPerRow) + attributeIndex];
+			const uint8_t attributeData = ReadMemory8(nameTableOffset + (c_rows * c_columnsPerRow) + attributeIndex);
 			const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRow, iColumn);
 
 			DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8, iColumn * 8, patternTableOffset, displayBuffer, pixelOutputTypeBuffer);

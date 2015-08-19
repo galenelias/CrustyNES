@@ -5,6 +5,7 @@
 #include "Cpu6502.h"
 #include "APU.h"
 #include "Controller.h"
+#include "IMapper.h"
 
 namespace NES
 {
@@ -35,6 +36,8 @@ private:
 	CPU::Cpu6502 m_cpu;
 	APU::Apu m_apu;
 	Controller m_controller1;
+
+	std::unique_ptr<IMapper> m_spMapper;
 };
 
 }

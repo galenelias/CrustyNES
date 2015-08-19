@@ -54,6 +54,8 @@ class NESRom
 public:
 	void LoadRomFromFile(IReadableFile* pRomFile);
 
+	uint8_t GetMapperId() const;
+
 	uint16_t GetCbPrgRom() const;
 	const byte* GetPrgRom() const;
 

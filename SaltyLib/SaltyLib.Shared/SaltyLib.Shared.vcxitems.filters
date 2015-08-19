@@ -25,6 +25,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)NES\APU.h">
       <Filter>NES</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\IMapper.h">
+      <Filter>NES</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
@@ -51,10 +54,22 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\APU.cpp">
       <Filter>NES</Filter>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Mappers\mmc1.cpp">
+      <Filter>NES\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Mappers\mmc0.cpp">
+      <Filter>NES\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Mappers\MapperFactory.cpp">
+      <Filter>NES\Mappers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="NES">
       <UniqueIdentifier>{691bde27-b021-4832-bfaa-b075c84c217e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NES\Mappers">
+      <UniqueIdentifier>{12fa3549-4aee-4bd0-9aff-0b501171927d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

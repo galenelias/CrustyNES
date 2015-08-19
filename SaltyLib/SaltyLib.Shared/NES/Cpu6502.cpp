@@ -50,7 +50,7 @@ uint16_t MapIoRegisterMemoryOffset(uint16_t offset)
 
 uint8_t Cpu6502::ReadMemory8(uint16_t offset) const
 {
-	if (offset >= 0x8000) // PRG ROM
+	if (offset >= 0x4020) // PRG ROM
 	{
 		// For now, only support NROM mapper NES-NROM-128 and NES-NROM-256 (iNes Mapper 0)
 		if (m_cbPrgRom == 32 * 1024)

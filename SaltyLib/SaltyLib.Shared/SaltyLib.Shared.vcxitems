@@ -19,6 +19,7 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)NES\APU.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NES\Controller.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NES\Cpu6502.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\IMapper.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NES\NES.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NES\NESRom.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)NES\Ppu.h" />
@@ -32,6 +33,9 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\APU.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\Controller.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\Cpu6502.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Mappers\MapperFactory.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Mappers\mmc0.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Mappers\mmc1.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\NES.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\NESRom.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\Ppu.cpp" />

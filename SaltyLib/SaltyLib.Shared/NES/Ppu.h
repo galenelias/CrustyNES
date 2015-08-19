@@ -7,6 +7,7 @@
 
 namespace NES {
 	class NESRom;
+	class IMapper;
 }
 
 namespace CPU {
@@ -58,8 +59,7 @@ public:
 	Ppu(const Ppu&) = delete;
 	Ppu& operator=(const Ppu&) = delete;
 
-	void MapRomMemory(const NES::NESRom& rom);
-
+	void MapRomMemory(const NES::NESRom& rom, NES::IMapper* pMapper);
 
 	bool InVBlank() const { return false; }
 
@@ -126,8 +126,6 @@ private:
 	static const int c_totalScanlines = 240;
 	static const int c_pixelsPerScanlines = 340;
 
-	static const uint16_t c_cbVRAM = 16*1024; // 0x4000
-	uint8_t m_vram[c_cbVRAM]; // 16KB of video ram
 	uint8_t m_sprRam[256]; // Sprite RAM
 
 	uint16_t m_cpuPpuAddr = 0;
@@ -149,6 +147,7 @@ private:
 	MirroringMode m_mirroringMode;
 
 	CPU::Cpu6502& m_cpu;
+	NES::IMapper* m_pMapper;
 };
 
 } // namespace Ppu
