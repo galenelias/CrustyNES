@@ -36,10 +36,12 @@ void Cpu6502::GenerateNonMaskableInterrupt()
 }
 
 
-void Cpu6502::MapRomMemory(const NES::NESRom& rom)
+void Cpu6502::MapRomMemory(const NES::NESRom& rom, NES::IMapper* pMapper)
 {
-	m_cbPrgRom = rom.GetCbPrgRom();
-	m_prgRom = rom.GetPrgRom();
+	//m_cbPrgRom = rom.GetCbPrgRom();
+	//m_prgRom = rom.GetPrgRom();
+
+	m_pMapper = pMapper;
 }
 
 uint16_t MapIoRegisterMemoryOffset(uint16_t offset)
@@ -52,22 +54,7 @@ uint8_t Cpu6502::ReadMemory8(uint16_t offset) const
 {
 	if (offset >= 0x4020) // PRG ROM
 	{
-		// For now, only support NROM mapper NES-NROM-128 and NES-NROM-256 (iNes Mapper 0)
-		if (m_cbPrgRom == 32 * 1024)
-		{
-			return m_prgRom[offset - 0x8000];
-		}
-		else if (m_cbPrgRom == 16 * 1024)
-		{
-			if (offset >= 0xC000)
-				return m_prgRom[offset - 0xC000];
-			else
-				return m_prgRom[offset - 0x8000];
-		}
-		else
-		{
-			throw std::runtime_error("Unexpected read location");
-		}
+		return m_pMapper->ReadAddress(offset);
 	}
 	else if (offset < 0x800) // CPU RAM
 	{
@@ -200,6 +187,10 @@ void Cpu6502::WriteMemory8(uint16_t offset, uint8_t value)
 	else if (offset == 0x4017)
 	{
 		// REVIEW: Control pad... TODO, ignore for now
+	}
+	else if (offset >= 0x4020)
+	{
+		m_pMapper->WriteAddress(offset, value);
 	}
 	else
 	{

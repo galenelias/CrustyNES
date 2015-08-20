@@ -94,7 +94,7 @@ uint8_t NESRom::GetMapperId() const
 }
 
 
-uint16_t NESRom::GetCbPrgRom() const
+uint32_t NESRom::GetCbPrgRom() const
 {
 	return m_header.CbPrgRomData();
 }

@@ -29,8 +29,8 @@ public:
 
 	bool UseBattery() const { return (m_Flags6 & 0x01) != 0; }
 	bool UseTrainer() const { return (m_Flags6 & 0x04) != 0; }
-	uint16_t CbPrgRomData() const { return m_cbPRGRom * 16 * 1024; }
-	uint16_t CbChrRomData() const { return m_cbCHRRom * 8 * 1024; }
+	uint32_t CbPrgRomData() const { return static_cast<uint32_t>(m_cbPRGRom) * 16 * 1024; }
+	uint32_t CbChrRomData() const { return static_cast<uint32_t>(m_cbCHRRom) * 8 * 1024; }
 
 	PPU::MirroringMode GetMirroringMode() const;
 	byte MapperNumber() const { return ((m_Flags6 & 0xF0) >> 4) | (m_Flags7 & 0x0f); }
@@ -56,7 +56,7 @@ public:
 
 	uint8_t GetMapperId() const;
 
-	uint16_t GetCbPrgRom() const;
+	uint32_t GetCbPrgRom() const;
 	const byte* GetPrgRom() const;
 
 	bool HasChrRom() const;

@@ -188,7 +188,7 @@ public:
 
 	void Reset();
 
-	void MapRomMemory(const NES::NESRom& rom);
+	void MapRomMemory(const NES::NESRom& rom, NES::IMapper* pMapper);
 
 	void RunNextInstruction();
 
@@ -236,12 +236,13 @@ private:
 
 	// REVIEW: Simulate memory bus?
 	byte m_cpuRam[2*1024 /*2KB*/];
-	const byte *m_prgRom;
-	uint16_t m_cbPrgRom;
+	//const byte *m_prgRom;
+	//uint16_t m_cbPrgRom;
 
 	NES::NES& m_nes;
 	PPU::Ppu& m_ppu;
 	NES::APU::Apu& m_apu;
+	NES::IMapper* m_pMapper;
 
 	// PPU stuff
 	uint8_t m_ppuCtrlReg1;

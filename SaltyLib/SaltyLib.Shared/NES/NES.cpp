@@ -28,10 +28,11 @@ int NES::GetCyclesRanSoFar() const
 void NES::LoadRomFile(IReadableFile* pRomFile)
 {
 	m_rom.LoadRomFromFile(pRomFile);
-	m_cpu.MapRomMemory(m_rom);
 
 	m_spMapper = CreateMapper(m_rom.GetMapperId());
 	m_spMapper->LoadFromRom(m_rom);
+
+	m_cpu.MapRomMemory(m_rom, m_spMapper.get());
 
 	if (m_rom.HasChrRom())
 		m_ppu.MapRomMemory(m_rom, m_spMapper.get());
