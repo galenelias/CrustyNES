@@ -28,6 +28,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)NES\IMapper.h">
       <Filter>NES</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)NES\Mappers\BasePpuMemoryMap.h">
+      <Filter>NES\Mappers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
@@ -61,6 +64,9 @@
       <Filter>NES\Mappers</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\Mappers\MapperFactory.cpp">
+      <Filter>NES\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Mappers\BasePpuMemoryMap.cpp">
       <Filter>NES\Mappers</Filter>
     </ClCompile>
   </ItemGroup>

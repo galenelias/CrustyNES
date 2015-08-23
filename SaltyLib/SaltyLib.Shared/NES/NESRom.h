@@ -61,7 +61,7 @@ public:
 
 	bool HasChrRom() const;
 	const byte* GetChrRom() const;
-	uint16_t CbChrRomData() const { return m_header.CbChrRomData(); }
+	uint32_t CbChrRomData() const { return m_header.CbChrRomData(); }
 
 	PPU::MirroringMode GetMirroringMode() const { return m_header.GetMirroringMode(); }
 

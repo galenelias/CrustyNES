@@ -190,10 +190,10 @@ void CWinSaltyNESDlg::OpenRomFile(LPCWSTR pwzRomFile)
 	m_nes.Reset();
 	
 	if (m_loggingEnabled)
-		StartLoggiong();
+		StartLogging();
 }
 
-void CWinSaltyNESDlg::StartLoggiong()
+void CWinSaltyNESDlg::StartLogging()
 {
 	PWSTR pwzLocalAppDataPath = nullptr;
 	SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &pwzLocalAppDataPath);
@@ -287,7 +287,6 @@ HCURSOR CWinSaltyNESDlg::OnQueryDragIcon()
 void CWinSaltyNESDlg::PaintNESFrame(CDC* pDC)
 {
 	PPU::ppuDisplayBuffer_t screenPixels;
-
 	m_nes.GetPpu().RenderToBuffer(screenPixels);
 
 	::SetDIBits(pDC->GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, screenPixels, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
@@ -311,8 +310,8 @@ void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 		if (!runInfinitely)
 			instructionsRun++;
 
-		//std::string str = m_nes.GetCpu().GetDebugState() + "\n";
-		//m_debugFileOutput.write(str.c_str(), str.size());
+		std::string str = m_nes.GetCpu().GetDebugState() + "\n";
+		m_debugFileOutput.write(str.c_str(), str.size());
 
 		m_nes.RunCycle();
 

@@ -94,6 +94,11 @@ uint8_t Cpu6502::ReadMemory8(uint16_t offset) const
 		// REVIEW: Control pad 2... TODO, ignore for now
 		return 0;
 	}
+	else if (offset == 0x4015)
+	{
+		// REVIEW: APU Status
+		return 0;
+	}
 	else
 	{
 		throw std::runtime_error("Unexpected read location");

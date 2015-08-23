@@ -2,6 +2,7 @@
 
 #include "../IMapper.h"
 #include "../NESRom.h"
+#include "BasePpuMemoryMap.h"
 
 #include <stdexcept>
 
@@ -15,7 +16,11 @@ public:
 	{
 		// Copy pattern tables into vram
 		const byte* pChrRom = rom.GetChrRom();
-		memcpy_s(m_vram, _countof(m_vram), pChrRom, rom.CbChrRomData());
+		const uint32_t cbChrRom = rom.CbChrRomData();
+		if (cbChrRom > 0x2000)
+			throw std::runtime_error("Mapper0 doesn't support > 8K memory");
+
+		memcpy_s(m_vrom, _countof(m_vrom), pChrRom, cbChrRom);
 
 		m_cbPrgRom = rom.GetCbPrgRom();
 		m_prgRom = rom.GetPrgRom();
@@ -49,22 +54,27 @@ public:
 
 	virtual void WriteChrAddress(uint16_t address, uint8_t value) override
 	{
-		uint16_t effectiveOffset = address % c_cbVRAM;
-		m_vram[effectiveOffset] = value;
+		if (address < 0x2000)
+			m_vrom[address] = value;
+		else
+			m_basePpuMemory.WriteMemory(address, value);
 	}
 
 	virtual uint8_t ReadChrAddress(uint16_t address) override
 	{
-		uint16_t effectiveOffset = address % c_cbVRAM;
-		return m_vram[effectiveOffset];
+		if (address < 0x2000)
+			return m_vrom[address];
+		else
+			return m_basePpuMemory.ReadMemory(address);
 	}
 
 
 private:
 
-	static const uint16_t c_cbVRAM = 16*1024; // 0x4000
-	uint8_t m_vram[c_cbVRAM]; // 16KB of video ram
-	
+	static const uint16_t c_cbVROM = 8*1024; // 0x2000
+	uint8_t m_vrom[c_cbVROM]; // 16KB of video ram
+	BasePpuMemoryMap m_basePpuMemory;
+
 	const byte* m_prgRom;
 	uint32_t m_cbPrgRom;
 };

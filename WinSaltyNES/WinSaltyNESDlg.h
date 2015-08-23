@@ -33,7 +33,7 @@ protected:
 
 	static std::wstring PickRomFile();
 	void OpenRomFile(LPCWSTR pwzRomFile);
-	void StartLoggiong();
+	void StartLogging();
 
 	void RunCycles(int nCycles, bool runInfinitely);
 

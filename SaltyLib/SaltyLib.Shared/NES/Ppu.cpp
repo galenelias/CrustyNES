@@ -255,6 +255,9 @@ void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 
 		for (int iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
 		{
+			if (iColumn + iPixelColumn >= c_displayWidth)
+				break;
+
 			const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + iPixelRow);
 			const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + iPixelRow + 8);
 			const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
