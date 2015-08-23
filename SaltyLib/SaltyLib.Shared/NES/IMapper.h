@@ -12,6 +12,8 @@ class NESRom;
 class IMapper
 {
 public:
+	virtual ~IMapper() {};
+
 	virtual void LoadFromRom(const NESRom& rom) = 0;
 
 	virtual void WriteAddress(uint16_t address, uint8_t value) = 0;

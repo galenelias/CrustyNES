@@ -22,6 +22,9 @@ uint16_t BasePpuMemoryMap::MapPpuAddress(uint16_t address) const
 	if (address < 0x2000)
 		throw std::runtime_error("Unexpected BasePpuMemoryMap address");
 
+	if (address >= 0x3000 && address < 0x3F00)
+		throw std::runtime_error("Unsupported mirrored address (NYI)");
+
 	int ramSlot;
 	const int logicalTile = (address - 0x2000) / 0x400;
 	if (m_mirroringMode == PPU::MirroringMode::HorizontalMirroring)

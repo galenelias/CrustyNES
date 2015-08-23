@@ -24,6 +24,7 @@ struct MMC0ControlFlags
 };
 
 const uint32_t c_cb16RomBank = (16 * 1024);
+const uint32_t c_cbChrRomBank = (4 * 1024);
 
 class MMC1Mapper : public IMapper
 {
@@ -129,9 +130,11 @@ uint8_t MMC1Mapper::ReadAddress(uint16_t address)
 void MMC1Mapper::WriteChrAddress(uint16_t address, uint8_t value)
 {
 	if (address >= 0x0000 && address < 0x1000)
-		m_pChrBank1[address - 0x0000] = value;
+		//m_pChrBank1[address - 0x0000] = value;
+		throw std::runtime_error("Can't write to ROM (?)");
 	else if (address >= 0x1000 && address < 0x2000)
-		m_pChrBank2[address - 0x1000] = value;
+		//m_pChrBank2[address - 0x1000] = value;
+		throw std::runtime_error("Can't write to ROM (?)");
 	else
 		m_basePpuMemory.WriteMemory(address, value);
 }
@@ -158,12 +161,12 @@ void MMC1Mapper::SetRegister(uint16_t address, uint8_t value)
 	else if (registerSelector == 1)
 	{
 		m_register2 = value;
-		m_pChrBank1 = m_spVRAM.get() + (value * c_cb16RomBank);
+		m_pChrBank1 = m_spVRAM.get() + (value * c_cbChrRomBank);
 	}
 	else if (registerSelector == 2)
 	{
 		m_register3 = value;
-		m_pChrBank2 = m_spVRAM.get() + (value * c_cb16RomBank);
+		m_pChrBank2 = m_spVRAM.get() + (value * c_cbChrRomBank);
 	}
 	else if (registerSelector == 3)
 	{
