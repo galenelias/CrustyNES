@@ -271,10 +271,24 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 	}
 }
 
-
-void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool foregroundSprite, bool flipHorizontally, bool flipVertically, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
+// Handle the pattern table access logic differences between 8x8 sprites and 8x16 sprites
+int Ppu::GetSpriteTileOffset(uint8_t tileNumber, bool is8x8Sprite) const
 {
-	const int tileOffsetBase = patternTableOffset + (tileNumber << 4);
+	if (is8x8Sprite)
+	{
+		return GetSpriteNametableOffset() + (tileNumber << 4);  // Each sprite gets 16 bits of data
+	}
+	else
+	{
+		const uint16_t patternTable = ((tileNumber % 2) == 0) ? 0x0000 : 0x1000;
+		return patternTable + ((tileNumber/2) << 5);  // Each sprite gets 32 bits of data
+	}
+}
+
+
+void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool foregroundSprite, bool flipHorizontally, bool flipVertically, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
+{
+	const int tileOffsetBase = GetSpriteTileOffset(tileNumber, m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x8);
 
 	const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
 
@@ -341,7 +355,6 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 		}
 	}
 
-	const uint16_t spriteNameTableOffset = GetSpriteNametableOffset();
 	const int c_bytesPerSprite = 4;
 	for (int iSprite = 0; iSprite != 64; ++iSprite)
 	{
@@ -359,11 +372,7 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 		const bool flipHorizontally = (thirdByte & 0x40) != 0;
 		const bool flipVertically = (thirdByte & 0x80) != 0;
 
-		uint16_t nametableOffset = spriteNameTableOffset;
-		if (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16)
-			nametableOffset = iSprite % 2 == 0 ? 0x0000 : 0x1000;
-
-		DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, nametableOffset, displayBuffer, pixelOutputTypeBuffer);
+		DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, displayBuffer, pixelOutputTypeBuffer);
 
 		if (options.fDrawSpriteOutline)
 			DrawRectangle(displayBuffer, c_nesColorRed, spriteX, spriteX + 8, spriteY, spriteY + 8);
