@@ -75,6 +75,8 @@ private:
 
 	NESRunMode m_runMode = NESRunMode::Paused;
 
+	PPU::RenderOptions m_renderOptions;
+
 	MovingAverage<LONGLONG, 30> m_fpsAverage;
 	Stopwatch m_frameStopwatch;
 
@@ -89,4 +91,5 @@ public:
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnBnClickedPlayMusic();
+	afx_msg void OnBnClickedDebugRendering();
 };

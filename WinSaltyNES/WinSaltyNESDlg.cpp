@@ -115,6 +115,7 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_WM_ERASEBKGND()
 	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_PLAY_MUSIC, &CWinSaltyNESDlg::OnBnClickedPlayMusic)
+	ON_BN_CLICKED(IDC_DEBUG_RENDERING, &CWinSaltyNESDlg::OnBnClickedDebugRendering)
 END_MESSAGE_MAP()
 
 
@@ -287,7 +288,7 @@ HCURSOR CWinSaltyNESDlg::OnQueryDragIcon()
 void CWinSaltyNESDlg::PaintNESFrame(CDC* pDC)
 {
 	PPU::ppuDisplayBuffer_t screenPixels;
-	m_nes.GetPpu().RenderToBuffer(screenPixels);
+	m_nes.GetPpu().RenderToBuffer(screenPixels, m_renderOptions);
 
 	::SetDIBits(pDC->GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, screenPixels, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
 
@@ -310,8 +311,11 @@ void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 		if (!runInfinitely)
 			instructionsRun++;
 
-		std::string str = m_nes.GetCpu().GetDebugState() + "\n";
-		m_debugFileOutput.write(str.c_str(), str.size());
+		if (m_loggingEnabled)
+		{
+			std::string str = m_nes.GetCpu().GetDebugState() + "\n";
+			m_debugFileOutput.write(str.c_str(), str.size());
+		}
 
 		m_nes.RunCycle();
 
@@ -569,4 +573,13 @@ void CWinSaltyNESDlg::OnBnClickedPlayMusic()
 	int hz = wcstol((LPCWSTR)strHz, nullptr, 10);
 
 	PlayRandomAudio(hz);
+}
+
+
+void CWinSaltyNESDlg::OnBnClickedDebugRendering()
+{
+	bool fDebugRender = IsDlgButtonChecked(IDC_DEBUG_RENDERING) != 0;
+
+	m_renderOptions.fDrawBackgroundGrid = fDebugRender;
+	m_renderOptions.fDrawSpriteOutline = fDebugRender;
 }

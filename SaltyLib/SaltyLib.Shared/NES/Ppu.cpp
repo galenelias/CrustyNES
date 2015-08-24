@@ -30,6 +30,29 @@ static const DWORD c_nesRgbColorTable[64] = {
 	0x99FFFC, 0xDDDDDD, 0x111111, 0x111111,
 };
 
+const DWORD c_nesColorYellow = 0xFFFF00;
+const DWORD c_nesColorGreen = 0x00FF00;
+const DWORD c_nesColorGray = 0x808080;
+const DWORD c_nesColorRed = 0xFF0000;
+
+static void DrawRectangle(ppuDisplayBuffer_t displayBuffer, DWORD nesColor, uint32_t left, uint32_t right, uint32_t top, uint32_t bottom)
+{
+	// Draw top/bottom line
+	for (int iPixelColumn = left; iPixelColumn != right && iPixelColumn < c_displayWidth; ++iPixelColumn)
+	{
+		displayBuffer[top][iPixelColumn] = nesColor;
+		if (bottom < c_displayHeight)
+			displayBuffer[bottom][iPixelColumn] = nesColor;
+	}
+
+	// Draw left/right line
+	for (int iPixelRow = top; iPixelRow != bottom && iPixelRow < c_displayHeight; ++iPixelRow)
+	{
+		displayBuffer[iPixelRow][left] = nesColor;
+		if (right < c_displayWidth)
+			displayBuffer[iPixelRow][right] = nesColor;
+	}
+}
 
 Ppu::Ppu(CPU::Cpu6502& cpu)
 	: m_cpu(cpu)
@@ -232,7 +255,12 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 			const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
 											 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
 		
+			//if ((lowOrderColorBytes & 0x3) == 0)
+			//	lowOrderColorBytes = 0;
+			
 			const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
+			//const uint8_t fullPixelBytes = (lowOrderColorBytes == 0) ? 0 : (lowOrderColorBytes | highOrderPixelData);
+
 			const uint8_t colorDataOffset = ReadMemory8(c_paletteBkgOffset + fullPixelBytes);
 
 			displayBuffer[iRow + iPixelRow][iColumn + iPixelColumn] = c_nesRgbColorTable[colorDataOffset];
@@ -283,8 +311,7 @@ void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 }
 
 
-
-void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
+void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& options)
 {
 	const uint16_t nameTableOffset = GetBaseNametableOffset();
 	const uint16_t patternTableOffset = GetPatternTableOffset();
@@ -306,6 +333,9 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 			const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRow, iColumn);
 
 			DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8, iColumn * 8, patternTableOffset, displayBuffer, pixelOutputTypeBuffer);
+
+			if (options.fDrawBackgroundGrid)
+				DrawRectangle(displayBuffer, c_nesColorGray, iColumn*8, (iColumn+1)*8,  iRow*8, (iRow+1)*8);
 		}
 	}
 
@@ -328,6 +358,10 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer)
 		const bool flipVertically = (thirdByte & 0x80) != 0;
 
 		DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, spriteNameTableOffset, displayBuffer, pixelOutputTypeBuffer);
+
+		if (options.fDrawSpriteOutline)
+			DrawRectangle(displayBuffer, c_nesColorRed, spriteX, spriteX + 8, spriteY, spriteY + 8);
+
 	}
 }
 

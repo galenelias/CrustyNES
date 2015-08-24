@@ -17,6 +17,12 @@ namespace CPU {
 namespace PPU
 {
 
+struct RenderOptions
+{
+	bool fDrawBackgroundGrid = false;
+	bool fDrawSpriteOutline = false;
+};
+
 const int c_displayWidth = 256;
 const int c_displayHeight = 240;
 
@@ -65,7 +71,7 @@ public:
 
 	void DoStuff();
 	bool ShouldRender();
-	void RenderToBuffer(ppuDisplayBuffer_t displayBuffer);
+	void RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& options);
 
 	void WriteControlRegister1(uint8_t value); // $2000
 	void WriteControlRegister2(uint8_t value); // $2001

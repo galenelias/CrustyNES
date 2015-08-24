@@ -25,34 +25,51 @@ uint16_t BasePpuMemoryMap::MapPpuAddress(uint16_t address) const
 	if (address >= 0x3000 && address < 0x3F00)
 		throw std::runtime_error("Unsupported mirrored address (NYI)");
 
-	int ramSlot;
-	const int logicalTile = (address - 0x2000) / 0x400;
-	if (m_mirroringMode == PPU::MirroringMode::HorizontalMirroring)
+	if (address >= 0x2000 && address < 0x3000)
 	{
-		ramSlot = logicalTile / 2; // 0,1 -> 0;  2,3 -> 1
-	}
-	else if (m_mirroringMode == PPU::MirroringMode::VerticalMirroring)
-	{
-		ramSlot = logicalTile % 2; // 0,2 -> 0;  1,3 -> 1
+		int ramSlot;
+		const int logicalTile = (address - 0x2000) / 0x400;
+		if (m_mirroringMode == PPU::MirroringMode::HorizontalMirroring)
+		{
+			ramSlot = logicalTile / 2; // 0,1 -> 0;  2,3 -> 1
+		}
+		else if (m_mirroringMode == PPU::MirroringMode::VerticalMirroring)
+		{
+			ramSlot = logicalTile % 2; // 0,2 -> 0;  1,3 -> 1
+		}
+		else
+		{
+			throw std::runtime_error("Unsupported ppu mirroring mode");
+		}
+		return ramSlot * 1024 + (address & 0x3FFF);
 	}
 	else
 	{
-		throw std::runtime_error("Unsupported ppu mirroring mode");
+		return address;
 	}
-
-	return ramSlot * 1024 + (address & 0x3FFF);
 }
 
 uint8_t BasePpuMemoryMap::ReadMemory(uint16_t address) const
 {
 	uint16_t ramOffset = MapPpuAddress(address);
-	return m_ciram[ramOffset];
+	if (ramOffset >= 0x3F20)
+		throw std::runtime_error("Uh oh, unexpected mapping");
+	else if (ramOffset >= 0x3F00)
+		return m_paletteRam[ramOffset - 0x3f00];
+	else
+		return m_ciram[ramOffset];
 }
 
 void BasePpuMemoryMap::WriteMemory(uint16_t address, uint8_t value)
 {
 	uint16_t ramOffset = MapPpuAddress(address);
-	m_ciram[ramOffset] = value;
+	if (ramOffset >= 0x3F20)
+		throw std::runtime_error("Uh oh, unexpected mapping");
+	else if (ramOffset >= 0x3F00)
+		m_paletteRam[ramOffset - 0x3F00] = value;
+	else
+		m_ciram[ramOffset] = value;
+
 }
 
 }

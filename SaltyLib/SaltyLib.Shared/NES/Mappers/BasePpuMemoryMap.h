@@ -25,7 +25,8 @@ public:
 private:
 	uint16_t MapPpuAddress(uint16_t address) const;
 
-	uint8_t m_ciram[4 * 1024];
+	uint8_t m_ciram[2 * 1024];
+	uint8_t m_paletteRam[32];
 	
 	PPU::MirroringMode m_mirroringMode;
 };
