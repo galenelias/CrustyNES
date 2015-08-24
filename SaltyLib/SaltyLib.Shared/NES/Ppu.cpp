@@ -168,6 +168,9 @@ void Ppu::WriteControlRegister1(uint8_t value)
 	m_ppuCtrl1 = value;
 
 	UpdateStatusWithLastWrittenRegister(value);
+
+	//if (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x8)
+	//	throw std::runtime_error("8x16 sprites aren't yet supported");
 }
 
 void Ppu::UpdateStatusWithLastWrittenRegister(uint8_t value)
@@ -255,11 +258,8 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 			const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
 											 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
 		
-			//if ((lowOrderColorBytes & 0x3) == 0)
-			//	lowOrderColorBytes = 0;
-			
-			const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
-			//const uint8_t fullPixelBytes = (lowOrderColorBytes == 0) ? 0 : (lowOrderColorBytes | highOrderPixelData);
+			// All background colors should map to 3F00
+			const uint8_t fullPixelBytes = (lowOrderColorBytes == 0) ? 0 : (lowOrderColorBytes | highOrderPixelData);
 
 			const uint8_t colorDataOffset = ReadMemory8(c_paletteBkgOffset + fullPixelBytes);
 
@@ -276,7 +276,9 @@ void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 {
 	const int tileOffsetBase = patternTableOffset + (tileNumber << 4);
 
-	for (int iPixelRow = 0; iPixelRow != 8; ++iPixelRow)
+	const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
+
+	for (int iPixelRow = 0; iPixelRow != totalPixelRows; ++iPixelRow)
 	{
 		if (iRow + iPixelRow >= c_displayHeight)
 			break;
@@ -357,7 +359,11 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 		const bool flipHorizontally = (thirdByte & 0x40) != 0;
 		const bool flipVertically = (thirdByte & 0x80) != 0;
 
-		DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, spriteNameTableOffset, displayBuffer, pixelOutputTypeBuffer);
+		uint16_t nametableOffset = spriteNameTableOffset;
+		if (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16)
+			nametableOffset = iSprite % 2 == 0 ? 0x0000 : 0x1000;
+
+		DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, nametableOffset, displayBuffer, pixelOutputTypeBuffer);
 
 		if (options.fDrawSpriteOutline)
 			DrawRectangle(displayBuffer, c_nesColorRed, spriteX, spriteX + 8, spriteY, spriteY + 8);

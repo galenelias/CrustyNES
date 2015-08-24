@@ -55,9 +55,9 @@ uint8_t BasePpuMemoryMap::ReadMemory(uint16_t address) const
 	if (ramOffset >= 0x3F20)
 		throw std::runtime_error("Uh oh, unexpected mapping");
 	else if (ramOffset >= 0x3F00)
-		return m_paletteRam[ramOffset - 0x3f00];
+		return m_paletteRam[ramOffset - 0x3F00];
 	else
-		return m_ciram[ramOffset];
+		return m_ciram[ramOffset - 0x2000];
 }
 
 void BasePpuMemoryMap::WriteMemory(uint16_t address, uint8_t value)
@@ -68,7 +68,7 @@ void BasePpuMemoryMap::WriteMemory(uint16_t address, uint8_t value)
 	else if (ramOffset >= 0x3F00)
 		m_paletteRam[ramOffset - 0x3F00] = value;
 	else
-		m_ciram[ramOffset] = value;
+		m_ciram[ramOffset - 0x2000] = value;
 
 }
 

@@ -54,6 +54,12 @@ enum class PixelOutputType : uint8_t
 	Sprite = 2,
 };
 
+enum SpriteSize : uint8_t
+{
+	Size8x8 = 0,
+	Size8x16 = 1,
+};
+
 typedef PixelOutputType ppuPixelOutputTypeBuffer_t[c_displayHeight][c_displayWidth];
 
 
@@ -115,7 +121,7 @@ private:
 		uint8_t vramAddressIncrement:1;
 		uint8_t spritePatternTableAddress:1;
 		uint8_t backgroundPatternTableAddress:1;
-		uint8_t spriteSize:1;
+		SpriteSize spriteSize:1;
 		uint8_t ppuMasterSlave:1;
 		uint8_t nmiFlag:1;
 	};
