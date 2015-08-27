@@ -294,7 +294,8 @@ void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 
 	for (int iPixelRow = 0; iPixelRow != totalPixelRows; ++iPixelRow)
 	{
-		if (iRow + iPixelRow >= c_displayHeight)
+		const int iPixelRowOffset = flipVertically ? (totalPixelRows - iPixelRow) : iPixelRow;
+		if (iRow + iPixelRowOffset >= c_displayHeight)
 			break;
 
 		for (int iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
@@ -310,7 +311,6 @@ void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 			const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
 			const uint8_t colorDataOffset = ReadMemory8(c_paletteSprOffset + fullPixelBytes);
 
-			const int iPixelRowOffset = flipVertically ? (8 - iPixelRow) : iPixelRow;
 			const int iPixelColumnOffset = flipHorizontally ? (8 - iPixelColumn) : iPixelColumn;
 
 			// TODO: Need to emulate the sprite priority 'bug':  http://wiki.nesdev.com/w/index.php/PPU_sprite_priority
