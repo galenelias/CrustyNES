@@ -211,6 +211,7 @@ void Ppu::DoStuff()
 	}
 }
 
+
 bool Ppu::ShouldRender()
 {
 	bool shouldRender = m_shouldRender;
@@ -219,11 +220,13 @@ bool Ppu::ShouldRender()
 	return shouldRender;
 }
 
+
 uint8_t GetHighOrderColorFromAttributeEntry(uint8_t attributeData, int iRow, int iColumn)
 {
 	auto bitOffset = ((iRow & 2) << 1) | (iColumn & 2);
 	return ((attributeData >> bitOffset) & 0x3) << 2;
 }
+
 
 uint16_t Ppu::GetBaseNametableOffset() const
 {
@@ -239,8 +242,8 @@ uint16_t Ppu::GetBaseNametableOffset() const
 uint16_t Ppu::GetSpriteNametableOffset() const
 {
 	return m_ppuCtrlFlags.spritePatternTableAddress == 0 ? 0x0000 : 0x1000;
-
 }
+
 
 void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
 {
@@ -270,6 +273,7 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 		}
 	}
 }
+
 
 // Handle the pattern table access logic differences between 8x8 sprites and 8x16 sprites
 int Ppu::GetSpriteTileOffset(uint8_t tileNumber, bool is8x8Sprite) const
@@ -317,7 +321,6 @@ void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 				const uint8_t colorDataOffset = ReadMemory8(c_paletteSprOffset + fullPixelBytes);
 
 				// TODO: Need to emulate the sprite priority 'bug':  http://wiki.nesdev.com/w/index.php/PPU_sprite_priority
-
 				if (lowOrderColorBytes != 0 
 					&& ((outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::None)
 						 || (foregroundSprite && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))))
@@ -383,7 +386,6 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 			const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
 			DrawRectangle(displayBuffer, c_nesColorRed, spriteX, spriteX + 8, spriteY, spriteY + totalPixelRows);
 		}
-
 	}
 }
 
