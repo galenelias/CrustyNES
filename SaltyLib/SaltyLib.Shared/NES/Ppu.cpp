@@ -292,34 +292,39 @@ void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 
 	const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
 
-	for (int iPixelRow = 0; iPixelRow != totalPixelRows; ++iPixelRow)
+	const int totalTiles = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 2 : 1;
+	for (int iTile = 0; iTile != totalTiles; ++iTile)
 	{
-		const int iPixelRowOffset = flipVertically ? (totalPixelRows - iPixelRow) : iPixelRow;
-		if (iRow + iPixelRowOffset >= c_displayHeight)
-			continue;
-
-		for (int iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
+		for (int iPixelRow = 0; iPixelRow != 8; ++iPixelRow)
 		{
-			const int iPixelColumnOffset = flipHorizontally ? (8 - iPixelColumn) : iPixelColumn;
-			if (iColumn + iPixelColumnOffset >= c_displayWidth)
+			const int iPixelRowOffset = flipVertically ? (totalPixelRows - iPixelRow - iTile * 8) : (iPixelRow + iTile * 8);
+			if (iRow + iPixelRowOffset >= c_displayHeight)
 				continue;
 
-			const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + iPixelRow);
-			const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + iPixelRow + 8);
-			const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
-											 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
-		
-			const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
-			const uint8_t colorDataOffset = ReadMemory8(c_paletteSprOffset + fullPixelBytes);
-
-			// TODO: Need to emulate the sprite priority 'bug':  http://wiki.nesdev.com/w/index.php/PPU_sprite_priority
-
-			if (lowOrderColorBytes != 0 
-				&& ((outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::None)
-					 || (foregroundSprite && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))))
+			for (int iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
 			{
-				displayBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = c_nesRgbColorTable[colorDataOffset];
-				outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = PixelOutputType::Sprite;
+				const int iPixelColumnOffset = flipHorizontally ? (8 - iPixelColumn) : iPixelColumn;
+				if (iColumn + iPixelColumnOffset >= c_displayWidth)
+					continue;
+
+				const int c_bytesPerTile = 16;
+				const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iPixelRow);
+				const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iPixelRow + 8);
+				const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
+												 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
+			
+				const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
+				const uint8_t colorDataOffset = ReadMemory8(c_paletteSprOffset + fullPixelBytes);
+
+				// TODO: Need to emulate the sprite priority 'bug':  http://wiki.nesdev.com/w/index.php/PPU_sprite_priority
+
+				if (lowOrderColorBytes != 0 
+					&& ((outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::None)
+						 || (foregroundSprite && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))))
+				{
+					displayBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = c_nesRgbColorTable[colorDataOffset];
+					outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = PixelOutputType::Sprite;
+				}
 			}
 		}
 	}
