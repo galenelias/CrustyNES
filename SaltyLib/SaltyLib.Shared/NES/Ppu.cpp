@@ -296,12 +296,13 @@ void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 	{
 		const int iPixelRowOffset = flipVertically ? (totalPixelRows - iPixelRow) : iPixelRow;
 		if (iRow + iPixelRowOffset >= c_displayHeight)
-			break;
+			continue;
 
 		for (int iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
 		{
-			if (iColumn + iPixelColumn >= c_displayWidth)
-				break;
+			const int iPixelColumnOffset = flipHorizontally ? (8 - iPixelColumn) : iPixelColumn;
+			if (iColumn + iPixelColumnOffset >= c_displayWidth)
+				continue;
 
 			const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + iPixelRow);
 			const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + iPixelRow + 8);
@@ -311,13 +312,11 @@ void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 			const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
 			const uint8_t colorDataOffset = ReadMemory8(c_paletteSprOffset + fullPixelBytes);
 
-			const int iPixelColumnOffset = flipHorizontally ? (8 - iPixelColumn) : iPixelColumn;
-
 			// TODO: Need to emulate the sprite priority 'bug':  http://wiki.nesdev.com/w/index.php/PPU_sprite_priority
 
 			if (lowOrderColorBytes != 0 
 				&& ((outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::None)
-				     || (foregroundSprite && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))))
+					 || (foregroundSprite && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))))
 			{
 				displayBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = c_nesRgbColorTable[colorDataOffset];
 				outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = PixelOutputType::Sprite;
@@ -375,7 +374,10 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 		DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, displayBuffer, pixelOutputTypeBuffer);
 
 		if (options.fDrawSpriteOutline)
-			DrawRectangle(displayBuffer, c_nesColorRed, spriteX, spriteX + 8, spriteY, spriteY + 8);
+		{
+			const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
+			DrawRectangle(displayBuffer, c_nesColorRed, spriteX, spriteX + 8, spriteY, spriteY + totalPixelRows);
+		}
 
 	}
 }
