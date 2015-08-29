@@ -168,9 +168,6 @@ void Ppu::WriteControlRegister1(uint8_t value)
 	m_ppuCtrl1 = value;
 
 	UpdateStatusWithLastWrittenRegister(value);
-
-	//if (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x8)
-	//	throw std::runtime_error("8x16 sprites aren't yet supported");
 }
 
 void Ppu::UpdateStatusWithLastWrittenRegister(uint8_t value)
