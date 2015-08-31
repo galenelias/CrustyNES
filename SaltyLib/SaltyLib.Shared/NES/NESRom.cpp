@@ -36,12 +36,6 @@ void NESROMHeader::LoadFromFile(IReadableFile* pRomFile)
 	if (0 != memcmp(readBuffer, c_NESCookie, c_cbNESCookie))
 		throw InvalidRomFormatException("Invalid ROM Header");
 
-	for (int iByte = 11; iByte < 16; iByte++)
-	{
-		if (readBuffer[iByte] != 0)
-			throw InvalidRomFormatException("Invalid ROM Header");
-	}
-
 	this->m_cbPRGRom = readBuffer[4];
 	this->m_cbCHRRom = readBuffer[5];
 	this->m_Flags6 = readBuffer[6];
