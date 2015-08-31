@@ -7,6 +7,8 @@
 namespace PPU
 {
 
+const int c_tileSize = 8;
+
 const uint16_t c_paletteBkgOffset = 0x3F00;
 const uint16_t c_paletteSprOffset = 0x3F10;
 
@@ -38,19 +40,25 @@ const DWORD c_nesColorRed = 0xFF0000;
 static void DrawRectangle(ppuDisplayBuffer_t displayBuffer, DWORD nesColor, uint32_t left, uint32_t right, uint32_t top, uint32_t bottom)
 {
 	// Draw top/bottom line
-	for (int iPixelColumn = left; iPixelColumn != right && iPixelColumn < c_displayWidth; ++iPixelColumn)
+	if (top < c_displayHeight)
 	{
-		displayBuffer[top][iPixelColumn] = nesColor;
-		if (bottom < c_displayHeight)
-			displayBuffer[bottom][iPixelColumn] = nesColor;
+		for (int iPixelColumn = left; iPixelColumn != right && iPixelColumn < c_displayWidth; ++iPixelColumn)
+		{
+			displayBuffer[top][iPixelColumn] = nesColor;
+			if (bottom < c_displayHeight)
+				displayBuffer[bottom][iPixelColumn] = nesColor;
+		}
 	}
 
 	// Draw left/right line
-	for (int iPixelRow = top; iPixelRow != bottom && iPixelRow < c_displayHeight; ++iPixelRow)
+	if (left < c_displayWidth)
 	{
-		displayBuffer[iPixelRow][left] = nesColor;
-		if (right < c_displayWidth)
-			displayBuffer[iPixelRow][right] = nesColor;
+		for (int iPixelRow = top; iPixelRow != bottom && iPixelRow < c_displayHeight; ++iPixelRow)
+		{
+			displayBuffer[iPixelRow][left] = nesColor;
+			if (right < c_displayWidth)
+				displayBuffer[iPixelRow][right] = nesColor;
+		}
 	}
 }
 
@@ -229,7 +237,7 @@ uint16_t Ppu::GetBaseNametableOffset() const
 {
 	uint16_t offset = 0x2000 + (m_ppuCtrlFlags.nametableBaseAddress * 0x0400);
 
-	if (offset > 0x2000)
+	if (offset > 0x3000)
 		std::runtime_error("hrm");
 
 	return offset;
@@ -248,11 +256,20 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 
 	for (int iPixelRow = 0; iPixelRow != 8; ++iPixelRow)
 	{
+		if (iRow + iPixelRow < 0)
+			continue;
+
 		if (iRow + iPixelRow >= c_displayHeight)
 			break;
 
 		for (int iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
 		{
+			if (iColumn + iPixelColumn < 0)
+				continue;
+
+			if (iColumn + iPixelColumn >= c_displayWidth)
+				break;
+
 			const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + iPixelRow);
 			const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + iPixelRow + 8);
 			const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
@@ -342,17 +359,27 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 	ppuPixelOutputTypeBuffer_t pixelOutputTypeBuffer;
 	memset(pixelOutputTypeBuffer, 0, sizeof(pixelOutputTypeBuffer));
 
-	// Render background tiles
-	for (int iRow = 0; iRow != c_rows; ++iRow)
-	{
-		for (int iColumn = 0; iColumn != c_columnsPerRow; ++iColumn)
-		{
-			const uint8_t tileNumber = ReadMemory8(nameTableOffset + iRow * c_columnsPerRow + iColumn);
-			const uint8_t attributeIndex = static_cast<uint8_t>((iRow / 4) * 8 + (iColumn / 4));
-			const uint8_t attributeData = ReadMemory8(nameTableOffset + (c_rows * c_columnsPerRow) + attributeIndex);
-			const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRow, iColumn);
+	const int iRowPixelOffset = -(m_verticalScrollOffset % c_tileSize);
+	const int iColPixelOffset = -(m_horizontalScrollOffset % c_tileSize);
 
-			DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8, iColumn * 8, patternTableOffset, displayBuffer, pixelOutputTypeBuffer);
+	// Render background tiles
+	for (int iRow = 0; iRow != c_rows + 1; ++iRow)
+	{
+		const int iRowTile = (iRow + (m_verticalScrollOffset / c_tileSize)) % c_rows;
+		const bool rowOverflow = (iRow + (m_verticalScrollOffset / c_tileSize)) > c_rows;
+
+		for (int iColumn = 0; iColumn != c_columnsPerRow + 1; ++iColumn)
+		{
+			const int iColumnTile = (iColumn + (m_horizontalScrollOffset / c_tileSize)) % c_columnsPerRow;
+			const bool columnOverflow = (iColumn + (m_horizontalScrollOffset / c_tileSize)) > c_columnsPerRow;
+			const int xNametable = nameTableOffset + (columnOverflow ? 0x400 : 0) + (rowOverflow ? 0x800 : 0) & 0x2FFF;
+
+			const uint8_t tileNumber = ReadMemory8(xNametable + iRowTile * c_columnsPerRow + iColumnTile);
+			const uint8_t attributeIndex = static_cast<uint8_t>((iRowTile / 4) * 8 + (iColumnTile / 4));
+			const uint8_t attributeData = ReadMemory8(xNametable + (c_rows * c_columnsPerRow) + attributeIndex);
+			const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRowTile, iColumnTile);
+
+			DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8 + iRowPixelOffset, iColumn * 8 + iColPixelOffset, patternTableOffset, displayBuffer, pixelOutputTypeBuffer);
 
 			if (options.fDrawBackgroundGrid)
 				DrawRectangle(displayBuffer, c_nesColorGray, iColumn*8, (iColumn+1)*8,  iRow*8, (iRow+1)*8);
