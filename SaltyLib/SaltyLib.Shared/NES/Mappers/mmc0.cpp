@@ -44,7 +44,8 @@ void MMC0Mapper::LoadFromRom(const NESRom& rom)
 
 void MMC0Mapper::WriteAddress(uint16_t address, uint8_t value)
 {
-	throw std::runtime_error("Unexpected mapper write");
+	// TODO: Letting this through to test Ms Pacman.  Hrm, that works.  Need to figure out why this is happening and if its valid
+	//throw std::runtime_error("Unexpected mapper write");
 }
 
 uint8_t MMC0Mapper::ReadAddress(uint16_t offset)
