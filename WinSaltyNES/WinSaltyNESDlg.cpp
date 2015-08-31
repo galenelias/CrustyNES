@@ -287,16 +287,23 @@ HCURSOR CWinSaltyNESDlg::OnQueryDragIcon()
 
 void CWinSaltyNESDlg::PaintNESFrame(CDC* pDC)
 {
-	PPU::ppuDisplayBuffer_t screenPixels;
-	m_nes.GetPpu().RenderToBuffer(screenPixels, m_renderOptions);
+	//DWORD* pScreenPixelsBuf = new DWORD[PPU::c_displayWidth * PPU::c_displayHeight];
+	//PPU::ppuDisplayBuffer_t* pScreenPixels = (PPU::ppuDisplayBuffer_t*) pScreenPixelsBuf;
 
-	::SetDIBits(pDC->GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, screenPixels, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
+	PPU::ppuDisplayBuffer_t screenPixels;
+	PPU::ppuDisplayBuffer_t* pScreenPixels = &screenPixels;
+
+	m_nes.GetPpu().RenderToBuffer(*pScreenPixels, m_renderOptions);
+
+	::SetDIBits(pDC->GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, *pScreenPixels, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
 
 	CDC memDC;
 	memDC.CreateCompatibleDC(pDC);
 	CBitmap* pOldBitmap = memDC.SelectObject(&m_nesRenderBitmap);
 	pDC->StretchBlt(0, 0, 2 * PPU::c_displayWidth, 2 * PPU::c_displayHeight, &memDC, 0, 0, PPU::c_displayWidth, PPU::c_displayHeight, SRCCOPY);
 	memDC.SelectObject(pOldBitmap);
+
+	//delete [] pScreenPixelsBuf;
 }
 
 
