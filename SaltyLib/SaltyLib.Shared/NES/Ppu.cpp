@@ -4,6 +4,11 @@
 #include "Cpu6502.h"
 #include "IMapper.h"
 
+#undef max
+#undef min
+
+#include <algorithm>
+
 namespace PPU
 {
 
@@ -37,28 +42,26 @@ const DWORD c_nesColorGreen = 0x00FF00;
 const DWORD c_nesColorGray = 0x808080;
 const DWORD c_nesColorRed = 0xFF0000;
 
-static void DrawRectangle(ppuDisplayBuffer_t displayBuffer, DWORD nesColor, uint32_t left, uint32_t right, uint32_t top, uint32_t bottom)
+static void DrawRectangle(ppuDisplayBuffer_t displayBuffer, DWORD nesColor, int left, int right, int top, int bottom)
 {
 	// Draw top/bottom line
-	if (top < c_displayHeight)
+	for (int iPixelColumn = std::max(0, left); iPixelColumn != right && iPixelColumn < c_displayWidth; ++iPixelColumn)
 	{
-		for (int iPixelColumn = left; iPixelColumn != right && iPixelColumn < c_displayWidth; ++iPixelColumn)
-		{
+		if (top >= 0 && top < c_displayHeight)
 			displayBuffer[top][iPixelColumn] = nesColor;
-			if (bottom < c_displayHeight)
-				displayBuffer[bottom][iPixelColumn] = nesColor;
-		}
+
+		if (top >= 0 && bottom < c_displayHeight)
+			displayBuffer[bottom][iPixelColumn] = nesColor;
 	}
 
 	// Draw left/right line
-	if (left < c_displayWidth)
+	for (int iPixelRow = std::max(0, top); iPixelRow != bottom && iPixelRow < c_displayHeight; ++iPixelRow)
 	{
-		for (int iPixelRow = top; iPixelRow != bottom && iPixelRow < c_displayHeight; ++iPixelRow)
-		{
+		if (left >= 0 && left < c_displayWidth)
 			displayBuffer[iPixelRow][left] = nesColor;
-			if (right < c_displayWidth)
-				displayBuffer[iPixelRow][right] = nesColor;
-		}
+
+		if (right < c_displayWidth)
+			displayBuffer[iPixelRow][right] = nesColor;
 	}
 }
 
@@ -382,7 +385,7 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 			DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8 + iRowPixelOffset, iColumn * 8 + iColPixelOffset, patternTableOffset, displayBuffer, pixelOutputTypeBuffer);
 
 			if (options.fDrawBackgroundGrid)
-				DrawRectangle(displayBuffer, c_nesColorGray, iColumn*8, (iColumn+1)*8,  iRow*8, (iRow+1)*8);
+				DrawRectangle(displayBuffer, c_nesColorGray, iColumn*8 + iColPixelOffset, (iColumn+1)*8 + iColPixelOffset,  iRow*8 + iRowPixelOffset, (iRow+1)*8 + iRowPixelOffset);
 		}
 	}
 
