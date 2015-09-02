@@ -38,6 +38,7 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\Mappers\MapperFactory.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\Mappers\mmc0.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\Mappers\mmc1.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)NES\Mappers\UxROM.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\NES.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\NESRom.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)NES\Ppu.cpp" />
