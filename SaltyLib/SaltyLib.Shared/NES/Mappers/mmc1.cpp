@@ -49,8 +49,6 @@ private:
 	std::unique_ptr<byte[]> m_spVRAM;
 	uint32_t m_cbVRAM = 0;
 
-	byte m_ciram[2 * 16 * 1024];
-
 	const byte* m_prgRom;
 	uint32_t m_cbPrgRom;
 
