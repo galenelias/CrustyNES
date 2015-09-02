@@ -36,11 +36,8 @@ void Cpu6502::GenerateNonMaskableInterrupt()
 }
 
 
-void Cpu6502::MapRomMemory(const NES::NESRom& rom, NES::IMapper* pMapper)
+void Cpu6502::SetRomMapper(NES::IMapper* pMapper)
 {
-	//m_cbPrgRom = rom.GetCbPrgRom();
-	//m_prgRom = rom.GetPrgRom();
-
 	m_pMapper = pMapper;
 }
 

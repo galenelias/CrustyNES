@@ -188,7 +188,7 @@ public:
 
 	void Reset();
 
-	void MapRomMemory(const NES::NESRom& rom, NES::IMapper* pMapper);
+	void SetRomMapper(NES::IMapper* pMapper);
 
 	void RunNextInstruction();
 

@@ -255,9 +255,9 @@ uint16_t Ppu::GetSpriteNametableOffset() const
 
 void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
 {
-	const int tileOffsetBase = patternTableOffset + (tileNumber << 4);
+	const uint16_t tileOffsetBase = patternTableOffset + (tileNumber << 4);
 
-	for (int iPixelRow = 0; iPixelRow != 8; ++iPixelRow)
+	for (uint16_t iPixelRow = 0; iPixelRow != 8; ++iPixelRow)
 	{
 		if (iRow + iPixelRow < 0)
 			continue;
@@ -265,7 +265,7 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 		if (iRow + iPixelRow >= c_displayHeight)
 			break;
 
-		for (int iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
+		for (uint16_t iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
 		{
 			if (iColumn + iPixelColumn < 0)
 				continue;
@@ -293,7 +293,7 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 
 
 // Handle the pattern table access logic differences between 8x8 sprites and 8x16 sprites
-int Ppu::GetSpriteTileOffset(uint8_t tileNumber, bool is8x8Sprite) const
+uint16_t Ppu::GetSpriteTileOffset(uint8_t tileNumber, bool is8x8Sprite) const
 {
 	if (is8x8Sprite)
 	{
@@ -309,26 +309,26 @@ int Ppu::GetSpriteTileOffset(uint8_t tileNumber, bool is8x8Sprite) const
 
 void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool foregroundSprite, bool flipHorizontally, bool flipVertically, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
 {
-	const int tileOffsetBase = GetSpriteTileOffset(tileNumber, m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x8);
+	const uint16_t tileOffsetBase = GetSpriteTileOffset(tileNumber, m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x8);
 
 	const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
 
-	const int totalTiles = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 2 : 1;
-	for (int iTile = 0; iTile != totalTiles; ++iTile)
+	const uint16_t totalTiles = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 2 : 1;
+	for (uint16_t iTile = 0; iTile != totalTiles; ++iTile)
 	{
-		for (int iPixelRow = 0; iPixelRow != 8; ++iPixelRow)
+		for (uint16_t iPixelRow = 0; iPixelRow != 8; ++iPixelRow)
 		{
 			const int iPixelRowOffset = flipVertically ? (totalPixelRows - iPixelRow - iTile * 8) : (iPixelRow + iTile * 8);
 			if (iRow + iPixelRowOffset >= c_displayHeight)
 				continue;
 
-			for (int iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
+			for (uint16_t iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
 			{
 				const int iPixelColumnOffset = flipHorizontally ? (8 - iPixelColumn) : iPixelColumn;
 				if (iColumn + iPixelColumnOffset >= c_displayWidth)
 					continue;
 
-				const int c_bytesPerTile = 16;
+				const uint16_t c_bytesPerTile = 16;
 				const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iPixelRow);
 				const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iPixelRow + 8);
 				const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
@@ -368,14 +368,14 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 	// Render background tiles
 	for (int iRow = 0; iRow != c_rows + 1; ++iRow)
 	{
-		const int iRowTile = (iRow + (m_verticalScrollOffset / c_tileSize)) % c_rows;
+		const uint16_t iRowTile = (iRow + (m_verticalScrollOffset / c_tileSize)) % c_rows;
 		const bool rowOverflow = (iRow + (m_verticalScrollOffset / c_tileSize)) > c_rows;
 
 		for (int iColumn = 0; iColumn != c_columnsPerRow + 1; ++iColumn)
 		{
-			const int iColumnTile = (iColumn + (m_horizontalScrollOffset / c_tileSize)) % c_columnsPerRow;
+			const uint16_t iColumnTile = (iColumn + (m_horizontalScrollOffset / c_tileSize)) % c_columnsPerRow;
 			const bool columnOverflow = (iColumn + (m_horizontalScrollOffset / c_tileSize)) > c_columnsPerRow;
-			const int xNametable = nameTableOffset + (columnOverflow ? 0x400 : 0) + (rowOverflow ? 0x800 : 0) & 0x2FFF;
+			const uint16_t xNametable = nameTableOffset + (columnOverflow ? 0x400 : 0) + (rowOverflow ? 0x800 : 0) & 0x2FFF;
 
 			const uint8_t tileNumber = ReadMemory8(xNametable + iRowTile * c_columnsPerRow + iColumnTile);
 			const uint8_t attributeIndex = static_cast<uint8_t>((iRowTile / 4) * 8 + (iColumnTile / 4));

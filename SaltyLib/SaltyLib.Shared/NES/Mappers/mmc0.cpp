@@ -42,7 +42,7 @@ void MMC0Mapper::LoadFromRom(const NESRom& rom)
 	m_prgRom = rom.GetPrgRom();
 }
 
-void MMC0Mapper::WriteAddress(uint16_t address, uint8_t value)
+void MMC0Mapper::WriteAddress(uint16_t /*address*/, uint8_t /*value*/)
 {
 	// TODO: Letting this through to test Ms Pacman.  Hrm, that works.  Need to figure out why this is happening and if its valid
 	//throw std::runtime_error("Unexpected mapper write");

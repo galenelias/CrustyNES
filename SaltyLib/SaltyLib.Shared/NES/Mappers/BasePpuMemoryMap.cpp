@@ -41,7 +41,7 @@ uint16_t BasePpuMemoryMap::MapPpuAddress(uint16_t address) const
 		{
 			throw std::runtime_error("Unsupported ppu mirroring mode");
 		}
-		return 0x2000 + ramSlot * 1024 + (address & 0x03FF);
+		return static_cast<uint16_t>(0x2000 + ramSlot * 1024 + (address & 0x03FF));
 	}
 	else
 	{
