@@ -4,9 +4,6 @@
 #include "Cpu6502.h"
 #include "IMapper.h"
 
-#undef max
-#undef min
-
 #include <algorithm>
 
 namespace PPU

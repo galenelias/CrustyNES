@@ -9,9 +9,6 @@
 #include <xaudio2.h>
 #include <algorithm>
 
-#undef max
-#undef min
-
 void VerifyHr(HRESULT hr)
 {
 	if (FAILED(hr))
