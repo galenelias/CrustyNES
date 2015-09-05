@@ -53,18 +53,12 @@ private:
 	uint32_t m_cbPrgRom;
 
 	uint8_t m_shiftRegister = 0x10;
-	uint8_t m_programBankThingy = 0;
 
 	union
 	{
 		uint8_t m_regControl;
 		MMC0ControlFlags m_controlFlags;
 	};
-
-	//uint8_t m_regControl = 0;
-	uint8_t m_register2 = 0;
-	uint8_t m_register3 = 0;
-	uint8_t m_register4 = 0;
 
 	const uint8_t* m_pBank1Rom = nullptr;
 	const uint8_t* m_pBank2Rom = nullptr;
@@ -181,8 +175,6 @@ void MMC1Mapper::SetRegister(uint16_t address, uint8_t value)
 	}
 	else if (registerSelector == 1)
 	{
-		m_register2 = value;
-
 		if (m_controlFlags.chrRomBankMode == ChrRomBankMode::Switch8K)
 		{
 			value &= 0xFE;
@@ -199,13 +191,10 @@ void MMC1Mapper::SetRegister(uint16_t address, uint8_t value)
 		if (m_controlFlags.chrRomBankMode == ChrRomBankMode::Switch8K)
 			throw std::runtime_error("Need to ignore this if it happens");
 
-		m_register3 = value;
 		m_pChrBank2 = m_spVRAM.get() + (value * c_cbChrRomBank);
 	}
 	else if (registerSelector == 3)
 	{
-		m_register4 = value;
-
 		uint8_t prgRomBank = value & 0xF;
 		if (m_controlFlags.prgRomBankMode == PrgRomBankMode::FixLower16k)
 		{
