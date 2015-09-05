@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <array>
 
 // Provides the basic support for accessing PPU addresses $2000-$4000
 //  handling access to the CIRAM and the various nametable mirroring modes
@@ -25,8 +26,8 @@ public:
 private:
 	uint16_t MapPpuAddress(uint16_t address) const;
 
-	uint8_t m_ciram[2 * 1024];
-	uint8_t m_paletteRam[32];
+	std::array<uint8_t,2 * 1024> m_ciram;
+	std::array<uint8_t,32> m_paletteRam;
 	
 	PPU::MirroringMode m_mirroringMode;
 };
