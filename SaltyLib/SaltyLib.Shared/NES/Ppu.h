@@ -28,17 +28,20 @@ const int c_displayHeight = 240;
 
 typedef DWORD ppuDisplayBuffer_t[c_displayHeight][c_displayWidth];
 
-enum class PpuStatusFlag
+
+struct PpuStatusFlag
 {
-	Bit0 = 0x01,
-	Bit1 = 0x02,
-	Bit2 = 0x04,
-	Bit3 = 0x08,
-	Bit4 = 0x10,
-	Bit5 = 0x20,
-	Bit6 = 0x40,
-	InVBlank = 0x80,
+	uint8_t Bit0:1;
+	uint8_t Bit1 : 1;
+	uint8_t Bit2 : 1;
+	uint8_t Bit3 : 1;
+	uint8_t Bit4 : 1;
+	uint8_t Bit5 : 1;
+	uint8_t SpriteZeroHit:1;
+	uint8_t InVBlank:1;
 };
+
+
 
 enum class MirroringMode
 {
@@ -114,7 +117,7 @@ private:
 
 	uint16_t GetSpriteTileOffset(uint8_t tileNumber, bool is8x8Sprite) const;
 	void DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer);
-	void DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool foregroundSprite, bool flipHorizontally, bool flipVertically, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer);
+	bool DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool foregroundSprite, bool flipHorizontally, bool flipVertically, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer);
 
 	struct PpuControlFlags
 	{
@@ -134,7 +137,12 @@ private:
 		PpuControlFlags m_ppuCtrlFlags;
 	};
 	uint8_t m_ppuCtrl2;
-	uint8_t m_ppuStatus;
+	
+	union
+	{
+		uint8_t m_ppuStatus;
+		PpuStatusFlag m_ppuStatusFlags;
+	};
 
 	static const int c_totalScanlines = 240;
 	static const int c_pixelsPerScanlines = 340;

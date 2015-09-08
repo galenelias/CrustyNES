@@ -79,7 +79,7 @@ uint8_t Ppu::ReadPpuStatus()
 {
 	// Clear v-blank when ppu status is checked.
 	uint8_t currentStatus = m_ppuStatus;
-	m_ppuStatus &= (~static_cast<uint8_t>(PpuStatusFlag::InVBlank));
+	m_ppuStatusFlags.InVBlank = false;
 
 	// Additionally clear our the cpu's ppu address register
 	m_ppuAddressWriteParity = 0;
@@ -205,7 +205,7 @@ void Ppu::DoStuff()
 			m_scanline %= c_totalScanlines;
 			if (m_scanline == 0)
 			{
-				m_ppuStatus |= static_cast<uint8_t>(PpuStatusFlag::InVBlank);
+				m_ppuStatusFlags.InVBlank = true;
 				m_shouldRender = true;
 				if (m_ppuCtrlFlags.nmiFlag == 1)
 				{
@@ -304,10 +304,10 @@ uint16_t Ppu::GetSpriteTileOffset(uint8_t tileNumber, bool is8x8Sprite) const
 }
 
 
-void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool foregroundSprite, bool flipHorizontally, bool flipVertically, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
+bool Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool foregroundSprite, bool flipHorizontally, bool flipVertically, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
 {
+	bool spriteHit = false;
 	const uint16_t tileOffsetBase = GetSpriteTileOffset(tileNumber, m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x8);
-
 	const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
 
 	const uint16_t totalTiles = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 2 : 1;
@@ -342,9 +342,16 @@ void Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 					displayBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = c_nesRgbColorTable[colorDataOffset];
 					outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = PixelOutputType::Sprite;
 				}
+
+				if (lowOrderColorBytes != 0 && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))
+				{
+					spriteHit = true;
+				}
 			}
 		}
 	}
+
+	return spriteHit;
 }
 
 
@@ -361,6 +368,10 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 
 	const int iRowPixelOffset = -(m_verticalScrollOffset % c_tileSize);
 	const int iColPixelOffset = -(m_horizontalScrollOffset % c_tileSize);
+
+	// Clear the SpriteZero hit flag at the beginning of rendering
+	//m_ppuStatus &= ~static_cast<uint8_t>(PpuStatusFlag::SpriteZeroHit);
+	m_ppuStatusFlags.SpriteZeroHit = false;
 
 	// Render background tiles
 	for (int iRow = 0; iRow != c_rows + 1; ++iRow)
@@ -403,7 +414,12 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 		const bool flipHorizontally = (thirdByte & 0x40) != 0;
 		const bool flipVertically = (thirdByte & 0x80) != 0;
 
-		DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, displayBuffer, pixelOutputTypeBuffer);
+		const bool spriteHit = DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, displayBuffer, pixelOutputTypeBuffer);
+
+		if (iSprite == 0 && spriteHit)
+		{
+			m_ppuStatusFlags.SpriteZeroHit = true;
+		}
 
 		if (options.fDrawSpriteOutline)
 		{
