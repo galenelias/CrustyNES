@@ -37,6 +37,8 @@ const uint32_t c_cbChrRomBank = (4 * 1024);
 class MMC1Mapper : public IMapper
 {
 public:
+	MMC1Mapper& operator=(const MMC1Mapper& other) = delete;
+
 	virtual void LoadFromRom(const NESRom& rom) override;
 	virtual void WriteAddress(uint16_t address, uint8_t value) override;
 	virtual uint8_t ReadAddress(uint16_t address) override;
