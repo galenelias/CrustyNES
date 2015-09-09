@@ -33,9 +33,7 @@ void NES::LoadRomFile(IReadableFile* pRomFile)
 	m_spMapper->LoadFromRom(m_rom);
 
 	m_cpu.SetRomMapper(m_spMapper.get());
-
-	if (m_rom.HasChrRom())
-		m_ppu.MapRomMemory(m_rom, m_spMapper.get());
+	m_ppu.SetRomMapper(m_spMapper.get());
 }
 
 void NES::Reset()

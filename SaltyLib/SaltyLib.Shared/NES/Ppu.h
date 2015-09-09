@@ -74,7 +74,7 @@ public:
 	Ppu(const Ppu&) = delete;
 	Ppu& operator=(const Ppu&) = delete;
 
-	void MapRomMemory(const NES::NESRom& rom, NES::IMapper* pMapper);
+	void SetRomMapper(NES::IMapper* pMapper);
 
 	bool InVBlank() const { return false; }
 
@@ -164,8 +164,6 @@ private:
 	int m_scanline = 0;
 	int m_pixel = 0; // offset within scanline
 	bool m_shouldRender = false;
-
-	MirroringMode m_mirroringMode;
 
 	CPU::Cpu6502& m_cpu;
 	NES::IMapper* m_pMapper;

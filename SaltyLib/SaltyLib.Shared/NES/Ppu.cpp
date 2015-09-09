@@ -68,10 +68,9 @@ Ppu::Ppu(CPU::Cpu6502& cpu)
 }
 
 
-void Ppu::MapRomMemory(const NES::NESRom& rom, NES::IMapper* pMapper)
+void Ppu::SetRomMapper(NES::IMapper* pMapper)
 {
 	m_pMapper = pMapper;
-	m_mirroringMode = rom.GetMirroringMode();
 }
 
 

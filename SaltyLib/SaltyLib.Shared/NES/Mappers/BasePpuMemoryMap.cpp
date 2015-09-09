@@ -11,7 +11,6 @@ namespace NES
 void BasePpuMemoryMap::LoadRomData(const NESRom& rom)
 {
 	m_mirroringMode = rom.GetMirroringMode();
-
 }
 
 uint16_t BasePpuMemoryMap::MapPpuAddress(uint16_t address) const
