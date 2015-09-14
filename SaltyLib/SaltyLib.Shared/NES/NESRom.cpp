@@ -59,6 +59,10 @@ PPU::MirroringMode NESROMHeader::GetMirroringMode() const
 
 void NESRom::LoadRomFromFile(IReadableFile* pRomFile)
 {
+	// Clear out any previous ROM data if we're (re)loading from a file
+	m_prgRomData = nullptr;
+	m_chrRomData = nullptr;
+
 	m_header.LoadFromFile(pRomFile);
 
 	if (m_header.UseTrainer())

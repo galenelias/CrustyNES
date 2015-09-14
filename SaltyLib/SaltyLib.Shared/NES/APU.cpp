@@ -72,7 +72,7 @@ XAudioDevice::~XAudioDevice()
 
 void XAudioDevice::Initialize()
 {
-	m_autoComInitializer.InitializeCom(COINIT_MULTITHREADED);
+	m_autoComInitializer.InitializeCom(COINIT_APARTMENTTHREADED);
 	VerifyHr(XAudio2Create(&m_spXAudio2));
 
 	VerifyHr(m_spXAudio2->CreateMasteringVoice(&m_pMasteringVoice));
