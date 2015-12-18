@@ -1,0 +1,120 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\NES">
+      <UniqueIdentifier>{19ec7fdd-b614-435a-98c2-1e35cae63a67}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\NES\Mappers">
+      <UniqueIdentifier>{2e3ca071-b957-4e1a-83dd-66c5e42da2b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Util">
+      <UniqueIdentifier>{63e989c6-41b2-49b7-9745-eede881a8e42}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SaltyLibX.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CoreUtils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MovingAverage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SaltyLib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Stopwatch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\APU.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\Controller.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\Cpu6502.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\IMapper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\NES.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\NESRom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\Ppu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\Mappers\BasePpuMemoryMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\APU.cpp">
+      <Filter>Source Files\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\Controller.cpp">
+      <Filter>Source Files\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\Cpu6502.cpp">
+      <Filter>Source Files\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\Ppu.cpp">
+      <Filter>Source Files\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\NES.cpp">
+      <Filter>Source Files\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\NESRom.cpp">
+      <Filter>Source Files\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\Mappers\mmc1.cpp">
+      <Filter>Source Files\NES\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\Mappers\mmc0.cpp">
+      <Filter>Source Files\NES\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\Mappers\UxROM.cpp">
+      <Filter>Source Files\NES\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\Mappers\BasePpuMemoryMap.cpp">
+      <Filter>Source Files\NES\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\Mappers\MapperFactory.cpp">
+      <Filter>Source Files\NES\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="Util\MovingAverage.cpp">
+      <Filter>Source Files\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="Util\Stopwatch.cpp">
+      <Filter>Source Files\Util</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
