@@ -7,8 +7,25 @@
 #include "Controller.h"
 #include "IMapper.h"
 
+
 namespace NES
 {
+
+class unsupported_mapper : public std::runtime_error
+{
+public:
+	unsupported_mapper(int mapperNumber)
+		: m_mapperNum(mapperNumber)
+		, std::runtime_error("Unsupported mapper")
+	{
+	}
+
+	int GetMapperNumber() const { return m_mapperNum; }
+
+private:
+	std::string m_errorString;
+	int m_mapperNum;
+};
 
 
 class NES

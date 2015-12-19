@@ -8,8 +8,8 @@
 #include <fstream>
 
 #include "NES/NES.h"
-#include "MovingAverage.h"
-#include "Stopwatch.h"
+#include "Util/MovingAverage.h"
+#include "Util/Stopwatch.h"
 #include <xaudio2.h>
 
 // CWinSaltyNESDlg dialog
@@ -32,7 +32,7 @@ protected:
 	virtual BOOL PreTranslateMessage(MSG* pMsg);
 
 	static std::wstring PickRomFile();
-	void OpenRomFile(LPCWSTR pwzRomFile);
+	bool OpenRomFile(LPCWSTR pwzRomFile);
 	void StartLogging();
 
 	void RunCycles(int nCycles, bool runInfinitely);

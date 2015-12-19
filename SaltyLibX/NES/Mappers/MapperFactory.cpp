@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "../IMapper.h"
+#include "../NES.h"
 #include <stdexcept>
 
 namespace NES
@@ -21,8 +22,13 @@ MapperPtr CreateMapper(uint32_t mapperNumber)
 	case 2:
 		return CreateUxROMMapper();
 	default:
-		throw std::runtime_error("Unsupported mapper");
+		throw unsupported_mapper(mapperNumber);
 	}
+
+	// TODO:
+	//  4
+	//    BladeBuster
+
 }
 
 

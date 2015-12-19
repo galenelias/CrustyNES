@@ -7,10 +7,11 @@
 #include "WinSaltyNESDlg.h"
 #include "afxdialogex.h"
 
+#include "NES/NES.h"
 #include "NES/NESRom.h"
 #include "NES/Ppu.h"
 #include "NES/Cpu6502.h"
-#include "Stopwatch.h"
+#include "Util/Stopwatch.h"
 
 #include <Shlobj.h>
 #include <stdexcept>
@@ -180,18 +181,37 @@ std::wstring CWinSaltyNESDlg::PickRomFile()
 	return result;
 }
 
-void CWinSaltyNESDlg::OpenRomFile(LPCWSTR pwzRomFile)
+bool CWinSaltyNESDlg::OpenRomFile(LPCWSTR pwzRomFile)
 {
 	CWin32ReadOnlyFile romFile(pwzRomFile);
 
 	if (!romFile.IsValid())
-		return;
+		return false;
 
-	m_nes.LoadRomFile(&romFile);
-	m_nes.Reset();
-	
+	try
+	{
+		m_nes.LoadRomFile(&romFile);
+		m_nes.Reset();
+	}
+	catch (NES::unsupported_mapper& mapperException)
+	{
+		char errorString[256];
+		sprintf_s(errorString, "Unsupported mapper: %d", mapperException.GetMapperNumber());
+		MessageBoxA(m_hWnd, errorString, "Error loading ROM", MB_OK);
+		return false;
+	}
+	catch (std::exception& e)
+	{
+		char errorString[256];
+		sprintf_s(errorString, "Unexpected error loading ROM: %s", e.what());
+		MessageBoxA(m_hWnd, errorString, "Error loading ROM", MB_OK);
+		return false;
+	}
+
 	if (m_loggingEnabled)
 		StartLogging();
+
+	return true;
 }
 
 void CWinSaltyNESDlg::StartLogging()
@@ -438,8 +458,8 @@ void CWinSaltyNESDlg::OnBnClickedOpenRom()
 
 	if (!romFileName.empty())
 	{
-		OpenRomFile(romFileName.c_str());
-		OnBnClickedRunInfinite();
+		if (OpenRomFile(romFileName.c_str()))
+			OnBnClickedRunInfinite();
 	}
 }
 

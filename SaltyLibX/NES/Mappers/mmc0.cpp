@@ -71,8 +71,8 @@ uint8_t MMC0Mapper::ReadAddress(uint16_t offset)
 void MMC0Mapper::WriteChrAddress(uint16_t address, uint8_t value)
 {
 	if (address < 0x2000)
-		throw std::runtime_error("Writing to VROM?");
-		//m_vrom[address] = value;
+		//throw std::runtime_error("Writing to VROM?");
+		m_vrom[address] = value;
 	else
 		m_basePpuMemory.WriteMemory(address, value);
 }

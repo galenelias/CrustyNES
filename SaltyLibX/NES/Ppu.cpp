@@ -146,6 +146,9 @@ void Ppu::WriteOamAddress(uint8_t value)
 void Ppu::WriteOamData(uint8_t value)
 {
 	m_sprRam[m_cpuOamAddr++] = value;
+
+	if (m_cpuOamAddr >= 256)
+		m_cpuOamAddr = 0;
 }
 
 uint8_t Ppu::ReadOamData() const
@@ -156,7 +159,21 @@ uint8_t Ppu::ReadOamData() const
 void Ppu::TriggerOamDMA(uint8_t* pData)
 {
 	// REVIEW: account for cycles taken: (513 or 514)
-	memcpy_s(m_sprRam, 256, pData, 256);
+
+	if (m_cpuOamAddr == 0)
+	{
+		memcpy_s(m_sprRam, 256, pData, 256);
+	}
+	else
+	{
+		// OAM DMA technically starts at the current m_cpuOamAddr value, which is usually zero, but can be 
+		// arbitrary, so we need to support this, but since it's slower, we make the common case 'fast'.
+		// (probably not worth optimizing for infrequent 256 byte writes)
+		for (uint32_t offset = 0; offset != 256; ++offset)
+		{
+			m_sprRam[(m_cpuOamAddr + offset) % 256] = pData[offset];
+		}
+	}
 }
 
 
