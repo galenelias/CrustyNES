@@ -116,5 +116,8 @@
     <ClCompile Include="Util\Stopwatch.cpp">
       <Filter>Source Files\Util</Filter>
     </ClCompile>
+    <ClCompile Include="NES\Mappers\mmc5.cpp">
+      <Filter>Source Files\NES\Mappers</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

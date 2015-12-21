@@ -10,6 +10,7 @@ namespace NES
 MapperPtr CreateMMC0Mapper();
 MapperPtr CreateMMC1Mapper();
 MapperPtr CreateUxROMMapper();
+MapperPtr CreateMMC5Mapper();
 
 MapperPtr CreateMapper(uint32_t mapperNumber)
 {
@@ -21,6 +22,8 @@ MapperPtr CreateMapper(uint32_t mapperNumber)
 		return CreateMMC1Mapper();
 	case 2:
 		return CreateUxROMMapper();
+	case 5:
+		return CreateMMC5Mapper();
 	default:
 		throw unsupported_mapper(mapperNumber);
 	}
@@ -28,6 +31,7 @@ MapperPtr CreateMapper(uint32_t mapperNumber)
 	// TODO:
 	//  4
 	//    BladeBuster
+	//    River city ransom
 
 }
 
