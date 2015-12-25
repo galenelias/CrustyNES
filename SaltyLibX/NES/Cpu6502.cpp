@@ -248,62 +248,14 @@ uint8_t Cpu6502::ReadUInt8(AddressingMode mode)
 	{
 		return ReadMemory8(m_pc++);
 	}
-	else if (mode == AddressingMode::ABS)
-	{
-		uint16_t readOffset = ReadMemory16(m_pc);
-		m_pc += 2;
-		return ReadMemory8(readOffset);
-	}
-	else if (mode == AddressingMode::ABSX)
-	{
-		uint16_t readOffset = ReadMemory16(m_pc);
-		m_pc += 2;
-		readOffset += m_x;
-		return ReadMemory8(readOffset);
-	}
-	else if (mode == AddressingMode::ABSY)
-	{
-		uint16_t readOffset = ReadMemory16(m_pc);
-		m_pc += 2;
-		readOffset += m_y;
-		return ReadMemory8(readOffset);
-	}
-	else if (mode == AddressingMode::ZP)  // REVIEW: De-dupe with ReadUInt16
-	{
-		uint8_t zpOffset = ReadMemory8(m_pc++);
-		return ReadMemory8(zpOffset);
-	}
-	else if (mode == AddressingMode::ZPX)
-	{
-		uint8_t zpOffset = ReadMemory8(m_pc++);
-		zpOffset += m_x;
-		return ReadMemory8(zpOffset);
-	}
-	else if (mode == AddressingMode::ZPY)
-	{
-		uint8_t zpOffset = ReadMemory8(m_pc++);
-		zpOffset += m_y;
-		return ReadMemory8(zpOffset);
-	}
 	else if (mode == AddressingMode::ACC)
 	{
 		return m_acc;
 	}
-	else if (mode == AddressingMode::_ZPX_)
-	{
-		uint16_t indirectOffset = GetIndexedIndirectOffset();
-		return ReadMemory8(indirectOffset);
-	}
-	else if (mode == AddressingMode::_ZP_Y)
-	{
-		uint16_t indirectOffset = GetIndirectIndexedOffset();
-		return ReadMemory8(indirectOffset);
-	}
 	else
 	{
-		throw InvalidInstruction(0);
+		return ReadMemory8(GetAddressingModeOffset_Read(mode));
 	}
-
 }
 
 uint16_t Cpu6502::GetIndexedIndirectOffset()
@@ -341,11 +293,11 @@ uint16_t Cpu6502::ReadUInt16(AddressingMode mode)
 	}
 	else if (mode == AddressingMode::ZPX)
 	{
-		return ReadMemory16(GetAddressingModeOffset(mode));
+		return ReadMemory16(GetAddressingModeOffset_Read(mode));
 	}
 	else if (mode == AddressingMode::ZP)
 	{
-		return ReadMemory16(GetAddressingModeOffset(mode));
+		return ReadMemory16(GetAddressingModeOffset_Read(mode));
 	}
 	else
 	{
@@ -361,12 +313,69 @@ uint8_t* Cpu6502::GetReadWriteAddress(AddressingMode mode)
 	}
 	else
 	{
-		uint16_t memoryOffset = GetAddressingModeOffset(mode);
+		uint16_t memoryOffset = GetAddressingModeOffset_ReadWrite(mode);
 		return MapWritableMemoryOffset(memoryOffset);
 	}
 }
 
-uint16_t Cpu6502::GetAddressingModeOffset(AddressingMode mode)
+uint16_t Cpu6502::GetAddressingModeOffset_Read(AddressingMode mode)
+{
+	if (mode == AddressingMode::ABS)
+	{
+		uint16_t value = ReadMemory16(m_pc);
+		m_pc += 2;
+		return value;
+	}
+	else if (mode == AddressingMode::ABSX)
+	{
+		uint16_t value = ReadMemory16(m_pc);
+		m_pc += 2;
+		value += m_x;
+		return value;
+	}
+	else if (mode == AddressingMode::ABSY)
+	{
+		uint16_t value = ReadMemory16(m_pc);
+		m_pc += 2;
+		value += m_y;
+		return value;
+	}
+	else if (mode == AddressingMode::ZP)
+	{
+		uint8_t zpOffset = ReadMemory8(m_pc++);
+		return static_cast<uint16_t>(zpOffset);
+	}
+	else if (mode == AddressingMode::ZPX)
+	{
+		uint8_t zpOffset = ReadMemory8(m_pc++);
+		uint8_t memoryOffset = zpOffset + m_x;
+		return memoryOffset;
+	}
+	else if (mode == AddressingMode::ZPY)
+	{
+		uint8_t zpOffset = ReadMemory8(m_pc++);
+		uint8_t memoryOffset = zpOffset + m_y;
+		return memoryOffset;
+	}
+	else if (mode == AddressingMode::_ZPX_)
+	{
+		return GetIndexedIndirectOffset();
+	}
+	else if (mode == AddressingMode::_ZP_Y)
+	{
+		return GetIndirectIndexedOffset();
+	}
+	else if (mode == AddressingMode::IMM)
+	{
+		throw InvalidInstruction(0);  // Found in nestest.rom, invalid addressing mode for the given instructions
+	}
+	else
+	{
+		throw UnhandledInstruction(0);
+	}
+}
+
+uint16_t Cpu6502::GetAddressingModeOffset_ReadWrite(AddressingMode mode)
 {
 	if (mode == AddressingMode::ABS)
 	{
@@ -821,7 +830,7 @@ void Cpu6502::Instruction_LoadY(AddressingMode addressingMode)
 
 void Cpu6502::Instruction_StoreAccumulator(AddressingMode addressingMode)
 {
-	uint16_t writeOffset = GetAddressingModeOffset(addressingMode);
+	uint16_t writeOffset = GetAddressingModeOffset_ReadWrite(addressingMode);
 	WriteMemory8(writeOffset, m_acc);
 }
 
@@ -1174,13 +1183,13 @@ void Cpu6502::Instruction_JumpIndirect(AddressingMode addressingMode)
 
 void Cpu6502::Instruction_StoreX(AddressingMode addressingMode)
 {
-	uint16_t writeOffset = GetAddressingModeOffset(addressingMode);
+	uint16_t writeOffset = GetAddressingModeOffset_ReadWrite(addressingMode);
 	WriteMemory8(writeOffset, m_x);
 }
 
 void Cpu6502::Instruction_StoreY(AddressingMode addressingMode)
 {
-	uint16_t writeOffset = GetAddressingModeOffset(addressingMode);
+	uint16_t writeOffset = GetAddressingModeOffset_ReadWrite(addressingMode);
 	WriteMemory8(writeOffset, m_y);
 }
 
@@ -1425,7 +1434,7 @@ uint32_t Cpu6502::RunNextInstruction()
 				}
 				case OpCode0::STY:
 				{
-					uint16_t writeOffset = GetAddressingModeOffset(addressingMode);
+					uint16_t writeOffset = GetAddressingModeOffset_ReadWrite(addressingMode);
 					WriteMemory8(writeOffset, m_y);
 					break;
 				}
@@ -1513,7 +1522,7 @@ uint32_t Cpu6502::RunNextInstruction()
 				if (addressingMode == AddressingMode::ZPX)
 					addressingMode = AddressingMode::ZPY;
 
-				uint16_t writeOffset = GetAddressingModeOffset(addressingMode);
+				uint16_t writeOffset = GetAddressingModeOffset_ReadWrite(addressingMode);
 				WriteMemory8(writeOffset, m_x);
 				break;
 			}

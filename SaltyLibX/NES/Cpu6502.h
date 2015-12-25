@@ -285,7 +285,8 @@ private:
 
 	uint8_t ReadUInt8(AddressingMode mode);
 	uint16_t ReadUInt16(AddressingMode mode);
-	uint16_t GetAddressingModeOffset(AddressingMode mode);
+	uint16_t GetAddressingModeOffset_Read(AddressingMode mode);
+	uint16_t GetAddressingModeOffset_ReadWrite(AddressingMode mode);
 
 	uint16_t GetIndexedIndirectOffset();
 	uint16_t GetIndirectIndexedOffset();
