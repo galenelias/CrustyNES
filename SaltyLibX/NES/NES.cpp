@@ -13,16 +13,16 @@ NES::NES()
 
 void NES::RunCycle()
 {
-	m_cyclesRan++;
+	m_instructionsRan++;
 
-	GetCpu().RunNextInstruction();
-	GetPpu().DoStuff();
+	const uint32_t cpuCycles = GetCpu().RunNextInstruction();
+	GetPpu().AddCycles(cpuCycles);
 }
 
 
 int NES::GetCyclesRanSoFar() const
 {
-	return m_cyclesRan;
+	return m_instructionsRan;
 }
 
 void NES::LoadRomFile(IReadableFile* pRomFile)
@@ -38,7 +38,7 @@ void NES::LoadRomFile(IReadableFile* pRomFile)
 
 void NES::Reset()
 {
-	m_cyclesRan = 0;
+	m_instructionsRan = 0;
 	m_cpu.Reset();
 	//m_ppu.Reset() // ?
 }

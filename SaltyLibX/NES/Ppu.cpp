@@ -208,29 +208,46 @@ void Ppu::WriteControlRegister2(uint8_t value)
 }
 
 
+void Ppu::AddCycles(uint32_t cpuCycles)
+{
+	m_cycleCount += cpuCycles * 3;
+	if (m_cycleCount >= c_cyclesPerScanlines)
+	{
+		m_cycleCount -= c_cyclesPerScanlines;
+		m_scanline++;
+
+		if (m_scanline == c_VBlankScanline)
+		{
+			m_ppuStatusFlags.InVBlank = true;
+			m_shouldRender = true;
+			if (m_ppuCtrlFlags.nmiFlag == 1)
+			{
+				m_cpu.GenerateNonMaskableInterrupt();
+			}
+		}
+
+		if (m_scanline > c_maxScanline)
+		{
+			m_scanline = -1;
+		}
+	}
+}
+
+uint32_t Ppu::GetCycles() const
+{
+	return m_cycleCount;
+}
+
+uint32_t Ppu::GetScanline() const
+{
+	return m_scanline;
+}
+
+
 void Ppu::DoStuff()
 {
 	// We are going to do approximately ~3 cycles worth of work per 'DoStuff', which is 9 pixels of processing
-	m_pixel += 9;
-	if (m_pixel >= c_pixelsPerScanlines)
-	{
-		m_pixel %= c_pixelsPerScanlines;
-		m_scanline++;
-
-		if (m_scanline >= c_totalScanlines)
-		{
-			m_scanline %= c_totalScanlines;
-			if (m_scanline == 0)
-			{
-				m_ppuStatusFlags.InVBlank = true;
-				m_shouldRender = true;
-				if (m_ppuCtrlFlags.nmiFlag == 1)
-				{
-					m_cpu.GenerateNonMaskableInterrupt();
-				}
-			}
-		}
-	}
+	AddCycles(3);
 }
 
 

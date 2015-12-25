@@ -46,7 +46,7 @@ public:
 	Controller& UseController1() { return m_controller1; }
 
 private:
-	int m_cyclesRan = 0;
+	int m_instructionsRan = 0;
 
 	NESRom m_rom;
 	PPU::Ppu m_ppu;

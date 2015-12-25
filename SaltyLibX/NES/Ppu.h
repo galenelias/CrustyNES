@@ -97,6 +97,11 @@ public:
 
 	void TriggerOamDMA(uint8_t* pData);
 
+	void AddCycles(uint32_t cpuCycles);
+
+	uint32_t GetCycles() const;
+	uint32_t GetScanline() const;
+
 private:
 	uint8_t ReadMemory8(uint16_t offset);
 	void WriteMemory8(uint16_t offset, uint8_t value);
@@ -130,13 +135,30 @@ private:
 		uint8_t nmiFlag:1;
 	};
 
+	struct PpuMaskFlags
+	{
+		uint8_t grayScale:1; // 0 = normal, 1 = gray scale
+		uint8_t showBackgroundOnLeft:1;
+		uint8_t showSpritesOnLeft:1;
+		uint8_t showBackground:1;
+		uint8_t showSprites:1;
+		uint8_t emphasizeRed:1;
+		uint8_t emphasizeGreen:1;
+		uint8_t emphasizeBlue:1;
+	};
+
 
 	union
 	{
 		uint8_t m_ppuCtrl1;
 		PpuControlFlags m_ppuCtrlFlags;
 	};
-	uint8_t m_ppuCtrl2;
+
+	union
+	{
+		uint8_t m_ppuCtrl2;
+		PpuMaskFlags m_ppuMaskFlags;
+	};
 	
 	union
 	{
@@ -144,8 +166,10 @@ private:
 		PpuStatusFlag m_ppuStatusFlags;
 	};
 
-	static const int c_totalScanlines = 240;
-	static const int c_pixelsPerScanlines = 340;
+	static const int c_VBlankScanline = 240;
+	static const int c_minScanline = -1;
+	static const int c_maxScanline = 260;
+	static const int c_cyclesPerScanlines = 341;
 
 	uint8_t m_sprRam[256]; // Sprite RAM
 
@@ -157,12 +181,11 @@ private:
 	uint8_t m_verticalScrollOffset = 0;
 	uint8_t m_scrollWriteParity = 0; // 0 = first write (horizontal), 1 = second write (vertical)
 
+	uint32_t m_cycleCount = 0;
+	int m_scanline = 241;
 
 	const uint8_t* m_chrRom;
 
-	int m_ppuClock = 0;
-	int m_scanline = 0;
-	int m_pixel = 0; // offset within scanline
 	bool m_shouldRender = false;
 
 	CPU::Cpu6502& m_cpu;

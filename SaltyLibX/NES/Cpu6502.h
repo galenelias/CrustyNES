@@ -133,6 +133,7 @@ enum class AddressingMode
 	_ZPX_, // (Zero Page, X)
 	_ZP_Y, // (Zero Page), Y
 	ACC,   // Accumulator
+	IMP,   // Implied (not a real addressing mode)
 };
 
 enum class AddressingModeClass0
@@ -190,26 +191,101 @@ public:
 
 	void SetRomMapper(NES::IMapper* pMapper);
 
-	void RunNextInstruction();
+	uint32_t RunNextInstruction();
 
-	std::string GetDebugState() const;
+	const char* GetDebugState() const;
 
 	uint16_t GetProgramCounter() const { return m_pc; }
 
 	void GenerateNonMaskableInterrupt();
 
+	//enum class OpCode : uint16_t;
+	typedef void (Cpu6502::*InstrunctionFunc)(AddressingMode addressingMode);
+	struct OpCodeTableEntry
+	{
+		uint8_t opCode;
+		uint16_t baseCycles;
+		InstrunctionFunc func;
+		AddressingMode addrMode;
+	};
 private:
+
+	OpCodeTableEntry* DoOpcodeStuff(uint8_t opCode);
+
+	void Instruction_Unhandled(AddressingMode addressingMode);
+	void Instruction_Noop(AddressingMode addressingMode);
+	void Instruction_Break(AddressingMode addressingMode);
+
+	void Instruction_LoadAccumulator(AddressingMode addressingMode);
+	void Instruction_LoadX(AddressingMode addressingMode);
+	void Instruction_LoadY(AddressingMode addressingMode);
+	void Instruction_StoreAccumulator(AddressingMode addressingMode);
+	void Instruction_StoreX(AddressingMode addressingMode);
+	void Instruction_StoreY(AddressingMode addressingMode);
+	void Instruction_Compare(AddressingMode addressingMode);
+	void Instruction_CompareXRegister(AddressingMode addressingMode);
+	void Instruction_CompareYRegister(AddressingMode addressingMode);
+	void Instruction_TestBits(AddressingMode addressingMode);
+	void Instruction_And(AddressingMode addressingMode);
+	void Instruction_OrWithAccumulator(AddressingMode addressingMode);
+	void Instruction_ExclusiveOr(AddressingMode addressingMode);
+	void Instruction_AddWithCarry(AddressingMode addressingMode);
+	void Instruction_SubtractWithCarry(AddressingMode addressingMode);
+	void Instruction_RotateLeft(AddressingMode addressingMode);
+	void Instruction_RotateRight(AddressingMode addressingMode);
+	void Instruction_ArithmeticShiftLeft(AddressingMode addressingMode);
+	void Instruction_LogicalShiftRight(AddressingMode addressingMode);
+	void Instruction_DecrementX(AddressingMode addressingMode);
+	void Instruction_IncrementX(AddressingMode addressingMode);
+	void Instruction_DecrementY(AddressingMode addressingMode);
+	void Instruction_IncrementY(AddressingMode addressingMode);
+	void Instruction_TransferAtoX(AddressingMode addressingMode);
+	void Instruction_TransferXtoA(AddressingMode addressingMode);
+	void Instruction_TransferAtoY(AddressingMode addressingMode);
+	void Instruction_TransferYtoA(AddressingMode addressingMode);
+	void Instruction_SetInterrupt(AddressingMode addressingMode);
+	void Instruction_ClearInterrupt(AddressingMode addressingMode);
+	void Instruction_SetDecimal(AddressingMode addressingMode);
+	void Instruction_ClearDecimal(AddressingMode addressingMode);
+	void Instruction_SetCarry(AddressingMode addressingMode);
+	void Instruction_ClearCarry(AddressingMode addressingMode);
+	void Instruction_ClearOverflow(AddressingMode addressingMode);
+	void Instruction_TransferXToStack(AddressingMode addressingMode);
+	void Instruction_TransferStackToX(AddressingMode addressingMode);
+	void Instruction_PushAccumulator(AddressingMode addressingMode);
+	void Instruction_PullAccumulator(AddressingMode addressingMode);
+	void Instruction_PushProcessorStatus(AddressingMode addressingMode);
+	void Instruction_PullProcessorStatus(AddressingMode addressingMode);
+	void Instruction_BranchOnPlus(AddressingMode addressingMode);
+	void Instruction_BranchOnMinus(AddressingMode addressingMode);
+	void Instruction_BranchOnOverflowClear(AddressingMode addressingMode);
+	void Instruction_BranchOnOverflowSet(AddressingMode addressingMode);
+	void Instruction_BranchOnCarryClear(AddressingMode addressingMode);
+	void Instruction_BranchOnCarrySet(AddressingMode addressingMode);
+	void Instruction_BranchOnNotEqual(AddressingMode addressingMode);
+	void Instruction_BranchOnEqual(AddressingMode addressingMode);
+	void Instruction_DecrementMemory(AddressingMode addressingMode);
+	void Instruction_IncrementMemory(AddressingMode addressingMode);
+	void Instruction_JumpToSubroutine(AddressingMode addressingMode);
+	void Instruction_ReturnFromSubroutine(AddressingMode addressingMode);
+	void Instruction_ReturnFromInterrupt(AddressingMode addressingMode);
+	void Instruction_Jump(AddressingMode addressingMode);
+	void Instruction_JumpIndirect(AddressingMode addressingMode);
+
+	void Helper_ExecuteBranch(bool shouldBranch);
+
+
 	// Read stuff
 	uint8_t ReadMemory8(uint16_t offset) const;
 	uint16_t ReadMemory16(uint8_t /*offset*/) const { throw std::runtime_error("Oh shit"); }
 	uint16_t ReadMemory16(uint16_t offset) const;
 
 	// Addressing mode resolution
-	byte* GetReadWriteAddress(AddressingMode mode, uint8_t instruction);
+	byte* GetReadWriteAddress(AddressingMode mode);
 
-	uint8_t ReadUInt8(AddressingMode mode, uint8_t instruction);
-	uint16_t ReadUInt16(AddressingMode mode, uint8_t instruction);
-	uint16_t GetAddressingModeOffset(AddressingMode mode, uint8_t instruction);
+	uint8_t ReadUInt8(AddressingMode mode);
+	uint16_t ReadUInt16(AddressingMode mode);
+	uint16_t GetAddressingModeOffset(AddressingMode mode);
 
 	uint16_t GetIndexedIndirectOffset();
 	uint16_t GetIndirectIndexedOffset();
@@ -236,8 +312,7 @@ private:
 
 	// REVIEW: Simulate memory bus?
 	byte m_cpuRam[2*1024 /*2KB*/];
-	//const byte *m_prgRom;
-	//uint16_t m_cbPrgRom;
+	uint32_t m_cycles;
 
 	NES::NES& m_nes;
 	PPU::Ppu& m_ppu;
