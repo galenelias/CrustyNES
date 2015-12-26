@@ -16,7 +16,7 @@ public:
 	virtual void LoadFromRom(const NESRom& rom) override;
 	
 	virtual void WriteAddress(uint16_t address, uint8_t value) override;
-	virtual uint8_t ReadAddress(uint16_t offset) override;
+	virtual uint8_t ReadAddress(uint16_t address) override;
 	virtual void WriteChrAddress(uint16_t address, uint8_t value) override;
 	virtual uint8_t ReadChrAddress(uint16_t address) override;
 
@@ -25,6 +25,7 @@ private:
 	uint8_t m_vrom[c_cbVROM]; // 8KB of video ram
 	BasePpuMemoryMap m_basePpuMemory;
 
+	uint8_t m_prgRam[0x2000]; // 8k
 	const byte* m_prgRom;
 	uint32_t m_cbPrgRom;
 };
@@ -43,25 +44,37 @@ void MMC0Mapper::LoadFromRom(const NESRom& rom)
 	m_prgRom = rom.GetPrgRom();
 }
 
-void MMC0Mapper::WriteAddress(uint16_t /*address*/, uint8_t /*value*/)
+void MMC0Mapper::WriteAddress(uint16_t address, uint8_t value)
 {
-	// TODO: Letting this through to test Ms Pacman.  Hrm, that works.  Need to figure out why this is happening and if its valid
-	//throw std::runtime_error("Unexpected mapper write");
+	if (address >= 0x6000 && address < 0x8000)
+	{
+		m_prgRam[address - 0x6000] = value;
+	}
+	else
+	{
+		// TODO: Letting this through to test Ms Pacman.  Hrm, that works.  Need to figure out why this is happening and if its valid
+		// throw std::runtime_error("Unexpected mapper write");
+	}
 }
 
-uint8_t MMC0Mapper::ReadAddress(uint16_t offset)
+uint8_t MMC0Mapper::ReadAddress(uint16_t address)
 {
+	if (address >= 0x6000 && address < 0x8000)
+	{
+		return m_prgRam[address - 0x6000];
+	}
+
 	// For now, only support NROM mapper NES-NROM-128 and NES-NROM-256 (iNes Mapper 0)
 	if (m_cbPrgRom == 32 * 1024)
 	{
-		return m_prgRom[offset - 0x8000];
+		return m_prgRom[address - 0x8000];
 	}
 	else if (m_cbPrgRom == 16 * 1024)
 	{
-		if (offset >= 0xC000)
-			return m_prgRom[offset - 0xC000];
+		if (address >= 0xC000)
+			return m_prgRom[address - 0xC000];
 		else
-			return m_prgRom[offset - 0x8000];
+			return m_prgRom[address - 0x8000];
 	}
 	else
 	{
