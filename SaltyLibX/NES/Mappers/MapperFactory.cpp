@@ -22,8 +22,9 @@ MapperPtr CreateMapper(uint32_t mapperNumber)
 		return CreateMMC1Mapper();
 	case 2:
 		return CreateUxROMMapper();
-	case 5:
-		return CreateMMC5Mapper();
+	//case 5:
+	// Still under construction
+	//	return CreateMMC5Mapper();
 	default:
 		throw unsupported_mapper(mapperNumber);
 	}
