@@ -49,6 +49,8 @@ void UxROM::LoadFromRom(const NESRom& rom)
 
 	m_pBank1Rom = m_prgRom;
 	m_pBank2Rom = m_prgRom + (m_cbPrgRom - c_cb16RomBank);
+
+	m_basePpuMemory.LoadRomData(rom);
 }
 
 void UxROM::WriteAddress(uint16_t address, uint8_t value)

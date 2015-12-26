@@ -42,6 +42,8 @@ void MMC0Mapper::LoadFromRom(const NESRom& rom)
 
 	m_cbPrgRom = rom.GetCbPrgRom();
 	m_prgRom = rom.GetPrgRom();
+
+	m_basePpuMemory.LoadRomData(rom);
 }
 
 void MMC0Mapper::WriteAddress(uint16_t address, uint8_t value)

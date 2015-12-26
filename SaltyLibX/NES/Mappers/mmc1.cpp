@@ -110,6 +110,8 @@ void MMC1Mapper::LoadFromRom(const NESRom& rom)
 
 	m_pPrgRomBank1 = m_prgRom;
 	m_pPrgRomBank2 = m_prgRom + (m_cbPrgRom - c_cb16RomBank);
+
+	m_basePpuMemory.LoadRomData(rom);
 }
 
 void MMC1Mapper::SetTick(uint64_t tickCount)
