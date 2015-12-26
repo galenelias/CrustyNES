@@ -3,6 +3,7 @@
 #include "../IMapper.h"
 #include "../NESRom.h"
 #include "BasePpuMemoryMap.h"
+#include "BaseMapper.h"
 
 #include <stdexcept>
 #include <vector>
@@ -35,7 +36,7 @@ struct MMC0ControlFlags
 const uint32_t c_cb16RomBank = (16 * 1024);
 const uint32_t c_cbChrRomBank = (4 * 1024);
 
-class MMC5Mapper : public IMapper
+class MMC5Mapper : public BaseMapper
 {
 public:
 	MMC5Mapper& operator=(const MMC5Mapper& other) = delete;
