@@ -274,6 +274,7 @@ private:
 
 	void Helper_ExecuteBranch(bool shouldBranch);
 
+	void AddCycles(uint32_t cycles);
 
 	// Read stuff
 	uint8_t ReadMemory8(uint16_t offset) const;
@@ -281,7 +282,8 @@ private:
 	uint16_t ReadMemory16(uint16_t offset) const;
 
 	// Addressing mode resolution
-	byte* GetReadWriteAddress(AddressingMode mode);
+	template <typename Func>
+	void ReadModifyWriteUint8(AddressingMode mode, Func func);
 
 	uint8_t ReadUInt8(AddressingMode mode);
 	uint16_t ReadUInt16(AddressingMode mode);
@@ -289,7 +291,8 @@ private:
 	uint16_t GetAddressingModeOffset_ReadWrite(AddressingMode mode);
 
 	uint16_t GetIndexedIndirectOffset();
-	uint16_t GetIndirectIndexedOffset();
+	uint16_t GetIndirectIndexedOffset_Read();
+	uint16_t GetIndirectIndexedOffset_ReadWrite();
 
 	// Write stuff
 	byte* MapWritableMemoryOffset(uint16_t offset);
@@ -309,11 +312,10 @@ private:
 	void CompareValues(uint8_t minuend, uint8_t subtrahend);
 	void AddWithCarry(uint8_t val1, uint8_t val2);
 
-	void HandleInvalidInstruction(AddressingMode addressingMode, uint8_t instruction);
-
 	// REVIEW: Simulate memory bus?
 	byte m_cpuRam[2*1024 /*2KB*/];
-	uint32_t m_cycles;
+	uint32_t m_cycles = 0;
+	uint64_t m_totalCycles = 0;
 
 	NES::NES& m_nes;
 	PPU::Ppu& m_ppu;
