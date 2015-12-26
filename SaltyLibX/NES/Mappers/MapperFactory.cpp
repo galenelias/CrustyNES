@@ -27,8 +27,10 @@ MapperPtr CreateMapper(uint32_t mapperNumber)
 
 	// TODO:
 	//  4
-	//    BladeBuster
+	//   BladeBuster
 
+	// 9
+	//   Punch Out
 }
 
 
