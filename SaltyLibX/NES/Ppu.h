@@ -166,11 +166,6 @@ private:
 		PpuStatusFlag m_ppuStatusFlags;
 	};
 
-	static const int c_VBlankScanline = 240;
-	static const int c_minScanline = -1;
-	static const int c_maxScanline = 260;
-	static const int c_cyclesPerScanlines = 341;
-
 	uint8_t m_sprRam[256]; // Sprite RAM
 
 	uint16_t m_cpuPpuAddr = 0;

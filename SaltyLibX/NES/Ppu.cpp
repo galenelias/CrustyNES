@@ -210,6 +210,11 @@ void Ppu::WriteControlRegister2(uint8_t value)
 
 void Ppu::AddCycles(uint32_t cpuCycles)
 {
+	const int c_VBlankScanline = 241;
+	const int c_minScanline = -1;
+	const int c_maxScanline = 260;
+	const int c_cyclesPerScanlines = 341;
+
 	m_cycleCount += cpuCycles * 3;
 	if (m_cycleCount >= c_cyclesPerScanlines)
 	{
