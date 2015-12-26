@@ -166,6 +166,7 @@
     <ClCompile Include="NES\Mappers\MapperFactory.cpp" />
     <ClCompile Include="NES\Mappers\mmc0.cpp" />
     <ClCompile Include="NES\Mappers\mmc1.cpp" />
+    <ClCompile Include="NES\Mappers\mmc5.cpp" />
     <ClCompile Include="NES\Mappers\UxROM.cpp" />
     <ClCompile Include="NES\NES.cpp" />
     <ClCompile Include="NES\NESRom.cpp" />

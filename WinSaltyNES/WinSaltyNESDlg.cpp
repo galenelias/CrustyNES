@@ -498,17 +498,17 @@ void CWinSaltyNESDlg::RenderFrame()
 
 		try
 		{
-			m_nes.RunCycle();
+		m_nes.RunCycle();
 
 			if (m_nes.GetCyclesRanSoFar() == 17074)
 				m_debugFileOutput.flush();
 
-			if (m_nes.GetPpu().ShouldRender())
-			{
-				CClientDC clientDC(this);
-				PaintNESFrame(&clientDC);
-				break;
-			}
+		if (m_nes.GetPpu().ShouldRender())
+		{
+			CClientDC clientDC(this);
+			PaintNESFrame(&clientDC);
+			break;
+		}
 		
 		}
 		catch (std::exception& e)
