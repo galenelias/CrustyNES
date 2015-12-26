@@ -78,7 +78,6 @@ public:
 
 	bool InVBlank() const { return false; }
 
-	void DoStuff();
 	bool ShouldRender();
 	void RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& options);
 

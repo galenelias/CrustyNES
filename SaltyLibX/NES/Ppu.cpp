@@ -221,10 +221,13 @@ void Ppu::AddCycles(uint32_t cpuCycles)
 		m_cycleCount -= c_cyclesPerScanlines;
 		m_scanline++;
 
-		if (m_scanline == c_VBlankScanline)
+		if (m_scanline == 0)
+		{
+			m_shouldRender = true;
+		}
+		else if (m_scanline == c_VBlankScanline)
 		{
 			m_ppuStatusFlags.InVBlank = true;
-			m_shouldRender = true;
 			if (m_ppuCtrlFlags.nmiFlag == 1)
 			{
 				m_cpu.GenerateNonMaskableInterrupt();
@@ -246,13 +249,6 @@ uint32_t Ppu::GetCycles() const
 uint32_t Ppu::GetScanline() const
 {
 	return m_scanline;
-}
-
-
-void Ppu::DoStuff()
-{
-	// We are going to do approximately ~3 cycles worth of work per 'DoStuff', which is 9 pixels of processing
-	AddCycles(3);
 }
 
 
@@ -374,17 +370,17 @@ bool Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 				const uint8_t colorDataOffset = ReadMemory8(c_paletteSprOffset + fullPixelBytes);
 
 				// TODO: Need to emulate the sprite priority 'bug':  http://wiki.nesdev.com/w/index.php/PPU_sprite_priority
+				if (lowOrderColorBytes != 0 && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))
+				{
+					spriteHit = true;
+				}
+
 				if (lowOrderColorBytes != 0 
 					&& ((outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::None)
 						 || (foregroundSprite && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))))
 				{
 					displayBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = c_nesRgbColorTable[colorDataOffset];
 					outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = PixelOutputType::Sprite;
-				}
-
-				if (lowOrderColorBytes != 0 && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))
-				{
-					spriteHit = true;
 				}
 			}
 		}
@@ -409,61 +405,72 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 	const int iColPixelOffset = -(m_horizontalScrollOffset % c_tileSize);
 
 	// Clear the SpriteZero hit flag at the beginning of rendering
-	//m_ppuStatus &= ~static_cast<uint8_t>(PpuStatusFlag::SpriteZeroHit);
 	m_ppuStatusFlags.SpriteZeroHit = false;
 
-	// Render background tiles
-	for (int iRow = 0; iRow != c_rows + 1; ++iRow)
+	//if (!m_ppuMaskFlags.showBackground)
+	//	throw std::runtime_error("Unhandled: background rendering is disabled!");
+	
+	if (m_ppuMaskFlags.showBackground)
 	{
-		const uint16_t iRowTile = (iRow + (m_verticalScrollOffset / c_tileSize)) % c_rows;
-		const bool rowOverflow = (iRow + (m_verticalScrollOffset / c_tileSize)) > c_rows;
-
-		for (int iColumn = 0; iColumn != c_columnsPerRow + 1; ++iColumn)
+		// Render background tiles
+		for (int iRow = 0; iRow != c_rows + 1; ++iRow)
 		{
-			const uint16_t iColumnTile = (iColumn + (m_horizontalScrollOffset / c_tileSize)) % c_columnsPerRow;
-			const bool columnOverflow = (iColumn + (m_horizontalScrollOffset / c_tileSize)) > c_columnsPerRow;
-			const uint16_t xNametable = nameTableOffset + (columnOverflow ? 0x400 : 0) + (rowOverflow ? 0x800 : 0) & 0x2FFF;
+			const uint16_t iRowTile = (iRow + (m_verticalScrollOffset / c_tileSize)) % c_rows;
+			const bool rowOverflow = (iRow + (m_verticalScrollOffset / c_tileSize)) > c_rows;
 
-			const uint8_t tileNumber = ReadMemory8(xNametable + iRowTile * c_columnsPerRow + iColumnTile);
-			const uint8_t attributeIndex = static_cast<uint8_t>((iRowTile / 4) * 8 + (iColumnTile / 4));
-			const uint8_t attributeData = ReadMemory8(xNametable + (c_rows * c_columnsPerRow) + attributeIndex);
-			const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRowTile, iColumnTile);
+			for (int iColumn = 0; iColumn != c_columnsPerRow + 1; ++iColumn)
+			{
+				const uint16_t iColumnTile = (iColumn + (m_horizontalScrollOffset / c_tileSize)) % c_columnsPerRow;
+				const bool columnOverflow = (iColumn + (m_horizontalScrollOffset / c_tileSize)) > c_columnsPerRow;
+				const uint16_t xNametable = nameTableOffset + (columnOverflow ? 0x400 : 0) + (rowOverflow ? 0x800 : 0) & 0x2FFF;
 
-			DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8 + iRowPixelOffset, iColumn * 8 + iColPixelOffset, patternTableOffset, displayBuffer, pixelOutputTypeBuffer);
+				const uint8_t tileNumber = ReadMemory8(xNametable + iRowTile * c_columnsPerRow + iColumnTile);
+				const uint8_t attributeIndex = static_cast<uint8_t>((iRowTile / 4) * 8 + (iColumnTile / 4));
+				const uint8_t attributeData = ReadMemory8(xNametable + (c_rows * c_columnsPerRow) + attributeIndex);
+				const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRowTile, iColumnTile);
 
-			if (options.fDrawBackgroundGrid)
-				DrawRectangle(displayBuffer, c_nesColorGray, iColumn*8 + iColPixelOffset, (iColumn+1)*8 + iColPixelOffset,  iRow*8 + iRowPixelOffset, (iRow+1)*8 + iRowPixelOffset);
+				DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8 + iRowPixelOffset, iColumn * 8 + iColPixelOffset, patternTableOffset, displayBuffer, pixelOutputTypeBuffer);
+
+				if (options.fDrawBackgroundGrid)
+					DrawRectangle(displayBuffer, c_nesColorGray, iColumn*8 + iColPixelOffset, (iColumn+1)*8 + iColPixelOffset,  iRow*8 + iRowPixelOffset, (iRow+1)*8 + iRowPixelOffset);
+			}
 		}
 	}
 
-	const int c_bytesPerSprite = 4;
-	for (int iSprite = 0; iSprite != 64; ++iSprite)
+	//if (!m_ppuMaskFlags.showSprites)
+	//	throw std::runtime_error("Unhandled: background rendering is disabled!");
+
+	if (m_ppuMaskFlags.showSprites)
 	{
-		const size_t spriteByteOffset = iSprite * c_bytesPerSprite;
-		uint8_t spriteY = m_sprRam[spriteByteOffset + 0];
-		if (spriteY >= PPU::c_displayHeight - 2)
-			continue;
-
-		uint8_t spriteX = m_sprRam[spriteByteOffset + 3];
-		uint8_t tileNumber = m_sprRam[spriteByteOffset + 1];
-
-		const uint8_t thirdByte = m_sprRam[spriteByteOffset + 2];
-		const uint8_t highOrderColorBits = (thirdByte & 0x3) << 2;
-		const bool isForegroundSprite = (thirdByte & 0x20) == 0;
-		const bool flipHorizontally = (thirdByte & 0x40) != 0;
-		const bool flipVertically = (thirdByte & 0x80) != 0;
-
-		const bool spriteHit = DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, displayBuffer, pixelOutputTypeBuffer);
-
-		if (iSprite == 0 && spriteHit)
+		const int c_bytesPerSprite = 4;
+		for (int iSprite = 0; iSprite != 64; ++iSprite)
 		{
-			m_ppuStatusFlags.SpriteZeroHit = true;
-		}
+			const size_t spriteByteOffset = iSprite * c_bytesPerSprite;
+			uint8_t spriteY = m_sprRam[spriteByteOffset + 0];
+			if (spriteY >= PPU::c_displayHeight - 2)
+				continue;
 
-		if (options.fDrawSpriteOutline)
-		{
-			const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
-			DrawRectangle(displayBuffer, c_nesColorRed, spriteX, spriteX + 8, spriteY, spriteY + totalPixelRows);
+			uint8_t spriteX = m_sprRam[spriteByteOffset + 3];
+			uint8_t tileNumber = m_sprRam[spriteByteOffset + 1];
+
+			const uint8_t thirdByte = m_sprRam[spriteByteOffset + 2];
+			const uint8_t highOrderColorBits = (thirdByte & 0x3) << 2;
+			const bool isForegroundSprite = (thirdByte & 0x20) == 0;
+			const bool flipHorizontally = (thirdByte & 0x40) != 0;
+			const bool flipVertically = (thirdByte & 0x80) != 0;
+
+			const bool spriteHit = DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, displayBuffer, pixelOutputTypeBuffer);
+
+			if (iSprite == 0 && spriteHit)
+			{
+				m_ppuStatusFlags.SpriteZeroHit = true;
+			}
+
+			if (options.fDrawSpriteOutline)
+			{
+				const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
+				DrawRectangle(displayBuffer, c_nesColorRed, spriteX, spriteX + 8, spriteY, spriteY + totalPixelRows);
+			}
 		}
 	}
 }
