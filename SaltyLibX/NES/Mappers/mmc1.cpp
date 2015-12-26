@@ -3,6 +3,7 @@
 #include "../IMapper.h"
 #include "../NESRom.h"
 #include "BasePpuMemoryMap.h"
+#include "BaseMapper.h"
 
 #include <stdexcept>
 #include <vector>
@@ -34,7 +35,7 @@ struct MMC0ControlFlags
 const uint32_t c_cb16RomBank = (16 * 1024);
 const uint32_t c_cbChrRomBank = (4 * 1024);
 
-class MMC1Mapper : public IMapper
+class MMC1Mapper : public BaseMapper
 {
 public:
 	MMC1Mapper& operator=(const MMC1Mapper& other) = delete;
@@ -45,6 +46,8 @@ public:
 
 	virtual void WriteChrAddress(uint16_t address, uint8_t value) override;
 	virtual uint8_t ReadChrAddress(uint16_t address) override;
+
+	virtual void SetTick(uint64_t tickCount) override;
 
 private:
 	void SetRegister(uint16_t address, uint8_t value);
@@ -65,6 +68,9 @@ private:
 		uint8_t m_regControl;
 		MMC0ControlFlags m_controlFlags;
 	};
+
+	uint64_t m_timestamp = 0;
+	uint64_t m_lastWriteTimestamp = 0;
 
 	const uint8_t* m_pPrgRomBank1 = nullptr;
 	const uint8_t* m_pPrgRomBank2 = nullptr;
@@ -106,8 +112,19 @@ void MMC1Mapper::LoadFromRom(const NESRom& rom)
 	m_pPrgRomBank2 = m_prgRom + (m_cbPrgRom - c_cb16RomBank);
 }
 
+void MMC1Mapper::SetTick(uint64_t tickCount)
+{
+	m_timestamp = tickCount;
+}
+
 void MMC1Mapper::WriteAddress(uint16_t address, uint8_t value)
 {
+	uint64_t oldWriteTimestamp = m_lastWriteTimestamp;
+	m_lastWriteTimestamp = m_timestamp;
+
+	if (m_timestamp - oldWriteTimestamp == 0)
+		return;
+
 	if (address >= 0x8000)
 	{
 		bool shouldTransfer = (m_shiftRegister & 0x01) != 0;
@@ -231,13 +248,10 @@ void MMC1Mapper::SetRegister(uint16_t address, uint8_t value)
 			{
 				m_pChrBank1 = nullptr;
 			}
-			else if (value * c_cbChrRomBank < m_cbVROM)
-			{
-				m_pChrBank1 = m_vram.data() + (value * c_cbChrRomBank);
-			}
 			else
 			{
-				throw std::runtime_error("Switching to more ROM memory than we have");
+				const uint32_t offset = (value * c_cbChrRomBank) % m_cbVROM;
+				m_pChrBank1 = m_vram.data() + offset;
 			}
 		}
 	}
@@ -250,13 +264,10 @@ void MMC1Mapper::SetRegister(uint16_t address, uint8_t value)
 		{
 			m_pChrBank2 = nullptr;
 		}
-		else if (value * c_cbChrRomBank < m_cbVROM)
-		{
-			m_pChrBank2 = m_vram.data() + (value * c_cbChrRomBank);
-		}
 		else
 		{
-			throw std::runtime_error("Switching to more ROM memory than we have");
+			const uint32_t offset = (value * c_cbChrRomBank) % m_cbVROM;
+			m_pChrBank2 = m_vram.data() + offset;
 		}
 	}
 	else if (registerSelector == 3)
@@ -274,7 +285,7 @@ void MMC1Mapper::SetRegister(uint16_t address, uint8_t value)
 		{
 			prgRomBank &= 0xE;
 			m_pPrgRomBank1 = m_prgRom + (prgRomBank * c_cb16RomBank);
-			m_pPrgRomBank2 = m_prgRom + (prgRomBank * c_cb16RomBank) + 1;
+			m_pPrgRomBank2 = m_prgRom + ((prgRomBank + 1)* c_cb16RomBank);
 		}
 	}
 }

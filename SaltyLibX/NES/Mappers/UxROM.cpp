@@ -3,6 +3,7 @@
 #include "../IMapper.h"
 #include "../NESRom.h"
 #include "BasePpuMemoryMap.h"
+#include "BaseMapper.h"
 
 #include <stdexcept>
 
@@ -12,7 +13,7 @@ namespace NES
 const uint32_t c_cb16RomBank = (16 * 1024);
 const uint32_t c_cbChrRam = (8 * 1024);
 
-class UxROM : public IMapper
+class UxROM : public BaseMapper
 {
 public:
 	virtual void LoadFromRom(const NESRom& rom) override;
@@ -54,13 +55,15 @@ void UxROM::WriteAddress(uint16_t address, uint8_t value)
 {
 	if (address >= 0x8000)
 	{
-		uint8_t selectorValue1 = address & 0xF;
-		uint8_t selectorValue2 = address & 0x7;
+		//uint8_t selectorValue1 = address & 0xF;
+		//uint8_t selectorValue2 = address & 0x7;
 
-		if (selectorValue1 != value || selectorValue2 != value)
-			throw std::runtime_error("These seem to match.  Which one to trust?");
+		//if (selectorValue1 != value || selectorValue2 != value)
+		//	throw std::runtime_error("These seem to match.  Which one to trust?");
 
-		m_pBank1Rom = m_prgRom + (c_cb16RomBank * selectorValue1);
+		//m_pBank1Rom = m_prgRom + (c_cb16RomBank * selectorValue1);
+
+		m_pBank1Rom = m_prgRom + (c_cb16RomBank * (value & 0x7));
 	}
 	else if (address >= 4020 && address < 0x6000)
 	{

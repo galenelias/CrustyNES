@@ -22,6 +22,7 @@ public:
 	virtual void WriteChrAddress(uint16_t address, uint8_t value) = 0;
 	virtual uint8_t ReadChrAddress(uint16_t address) = 0;
 
+	virtual void SetTick(uint64_t tickCount) = 0;
 };
 
 

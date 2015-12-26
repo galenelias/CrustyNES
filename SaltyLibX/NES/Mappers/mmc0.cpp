@@ -3,13 +3,14 @@
 #include "../IMapper.h"
 #include "../NESRom.h"
 #include "BasePpuMemoryMap.h"
+#include "BaseMapper.h"
 
 #include <stdexcept>
 
 namespace NES
 {
 
-class MMC0Mapper : public IMapper
+class MMC0Mapper : public BaseMapper
 {
 public:
 	virtual void LoadFromRom(const NESRom& rom) override;

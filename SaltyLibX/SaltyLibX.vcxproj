@@ -147,6 +147,7 @@
     <ClInclude Include="NES\Controller.h" />
     <ClInclude Include="NES\Cpu6502.h" />
     <ClInclude Include="NES\IMapper.h" />
+    <ClInclude Include="NES\Mappers\BaseMapper.h" />
     <ClInclude Include="NES\Mappers\BasePpuMemoryMap.h" />
     <ClInclude Include="NES\NES.h" />
     <ClInclude Include="NES\NESRom.h" />

@@ -72,6 +72,9 @@
     <ClInclude Include="NES\Mappers\BasePpuMemoryMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="NES\Mappers\BaseMapper.h">
+      <Filter>Source Files\NES\Mappers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
