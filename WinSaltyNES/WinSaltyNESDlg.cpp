@@ -154,7 +154,7 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 
 	//OpenRomFile(L"C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes");
 	//OpenRomFile(L"C:\\Users\\gelias\\OneDrive\\Documents\\NES_Rom_Backups\\Donkey Kong Jr. (World) (Rev A).nes");
-	OpenRomFile(L"C:\\Users\\gelias\\Source\\Repos\\SaltyNES\\TestRoms\\nestest.nes");
+	OpenRomFile(L"C:\\Users\\gelias\\Source\\Repos\\SaltyNES\\TestRoms\\sprite_hit_tests_2005.10.05\\01.basics.nes");
 	SetupRenderBitmap();
 
 	CButton* pButton = static_cast<CButton*>(this->GetDlgItem(IDC_ENABLESOUND));
@@ -313,11 +313,13 @@ HCURSOR CWinSaltyNESDlg::OnQueryDragIcon()
 
 void CWinSaltyNESDlg::PaintNESFrame(CDC* pDC)
 {
-	PPU::ppuDisplayBuffer_t screenPixels;
+	//PPU::ppuDisplayBuffer_t screenPixels;
 
-	m_nes.GetPpu().RenderToBuffer(screenPixels, m_renderOptions);
+	//m_nes.GetPpu().RenderToBuffer(screenPixels, m_renderOptions);
+	//m_nes.GetPpu().RenderToBuffer(screenPixels, m_renderOptions);
+	//m_nes.GetPpu().RenderToBuffer(m_renderOptions);
 
-	::SetDIBits(pDC->GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, screenPixels, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
+	::SetDIBits(pDC->GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, m_nes.GetPpu().GetDisplayBuffer(), &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
 
 	CDC memDC;
 	memDC.CreateCompatibleDC(pDC);
@@ -488,40 +490,41 @@ void CWinSaltyNESDlg::OnBnClickedRunInfinite()
 
 void CWinSaltyNESDlg::RenderFrame()
 {
-	for (;;)
+	try
 	{
-		if (m_loggingEnabled)
-		{
-			const char* pszDebugString = m_nes.GetCpu().GetDebugState();
-			m_debugFileOutput.write(pszDebugString, strlen(pszDebugString));
-		}
-
-		try
-		{
-		m_nes.RunCycle();
-
-			if (m_nes.GetCyclesRanSoFar() == 17074)
-				m_debugFileOutput.flush();
-
-		if (m_nes.GetPpu().ShouldRender())
-		{
-			CClientDC clientDC(this);
-			PaintNESFrame(&clientDC);
-			break;
-		}
-		
-		}
-		catch (std::exception& e)
+		for (;;)
 		{
 			if (m_loggingEnabled)
 			{
-				char errorString[256];
-				sprintf_s(errorString, "Exception encountered: %s", e.what());
-				m_debugFileOutput.write(errorString, strlen(errorString));
+				const char* pszDebugString = m_nes.GetCpu().GetDebugState();
+				m_debugFileOutput.write(pszDebugString, strlen(pszDebugString));
 			}
-			m_runMode = NESRunMode::Paused;
-			KillTimer(TIMER_REDRAW);
+
+			m_nes.RunCycle();
+
+			if (m_nes.GetPpu().ShouldRender())
+			{
+				CClientDC clientDC(this);
+				PaintNESFrame(&clientDC);
+				break;
+			}
+
 		}
+	}
+	catch (std::exception& e)
+	{
+		char errorString[256];
+		sprintf_s(errorString, "Exception encountered: %s", e.what());
+
+		if (m_loggingEnabled)
+		{
+			m_debugFileOutput.write(errorString, strlen(errorString));
+		}
+		m_runMode = NESRunMode::Paused;
+		KillTimer(TIMER_REDRAW);
+
+		MessageBoxA(m_hWnd, errorString, "Error!", MB_OK);
+
 	}
 	
 	IncrementFrameCount(true /*shouldUpdateFpsCounter*/);
@@ -627,6 +630,8 @@ void CWinSaltyNESDlg::OnBnClickedDebugRendering()
 
 	m_renderOptions.fDrawBackgroundGrid = fDebugRender;
 	m_renderOptions.fDrawSpriteOutline = fDebugRender;
+
+	m_nes.GetPpu().SetRenderOptions(m_renderOptions);
 }
 
 

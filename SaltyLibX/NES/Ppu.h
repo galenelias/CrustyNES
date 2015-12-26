@@ -75,11 +75,14 @@ public:
 	Ppu& operator=(const Ppu&) = delete;
 
 	void SetRomMapper(NES::IMapper* pMapper);
+	void SetRenderOptions(const RenderOptions& renderOptions);
 
 	bool InVBlank() const { return false; }
 
 	bool ShouldRender();
 	void RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& options);
+	void RenderToBuffer(const RenderOptions& options);
+	void RenderScanline(int scanline);
 
 	void WriteControlRegister1(uint8_t value); // $2000
 	void WriteControlRegister2(uint8_t value); // $2001
@@ -100,6 +103,8 @@ public:
 
 	uint32_t GetCycles() const;
 	uint32_t GetScanline() const;
+
+	const ppuDisplayBuffer_t& GetDisplayBuffer() const;
 
 private:
 	uint8_t ReadMemory8(uint16_t offset);
@@ -181,6 +186,8 @@ private:
 	const uint8_t* m_chrRom;
 
 	bool m_shouldRender = false;
+	RenderOptions m_renderOptions;
+	PPU::ppuDisplayBuffer_t m_screenPixels;
 
 	CPU::Cpu6502& m_cpu;
 	NES::IMapper* m_pMapper;

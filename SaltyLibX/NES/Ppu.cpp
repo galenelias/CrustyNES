@@ -74,6 +74,10 @@ void Ppu::SetRomMapper(NES::IMapper* pMapper)
 	m_pMapper = pMapper;
 }
 
+void Ppu::SetRenderOptions(const RenderOptions& renderOptions)
+{
+	m_renderOptions = renderOptions;
+}
 
 uint8_t Ppu::ReadPpuStatus()
 {
@@ -221,22 +225,27 @@ void Ppu::AddCycles(uint32_t cpuCycles)
 		m_cycleCount -= c_cyclesPerScanlines;
 		m_scanline++;
 
-		if (m_scanline == 0)
+		if (m_scanline == c_VBlankScanline)
 		{
 			m_shouldRender = true;
-		}
-		else if (m_scanline == c_VBlankScanline)
-		{
+
 			m_ppuStatusFlags.InVBlank = true;
 			if (m_ppuCtrlFlags.nmiFlag == 1)
 			{
 				m_cpu.GenerateNonMaskableInterrupt();
 			}
 		}
-
-		if (m_scanline > c_maxScanline)
+		else if (m_scanline > c_maxScanline)
 		{
 			m_scanline = -1;
+			m_ppuStatusFlags.InVBlank = false;
+			m_ppuStatusFlags.SpriteZeroHit = false;
+			//m_ppuStatusFlags.SPRITEOVERFLOW = false;
+		}
+
+		if (m_scanline >= 0 && m_scanline < 240)
+		{
+			RenderScanline(m_scanline);
 		}
 	}
 }
@@ -259,6 +268,12 @@ bool Ppu::ShouldRender()
 		m_shouldRender = false;
 	return shouldRender;
 }
+
+const ppuDisplayBuffer_t& Ppu::GetDisplayBuffer() const
+{
+	return m_screenPixels;
+}
+
 
 
 uint8_t GetHighOrderColorFromAttributeEntry(uint8_t attributeData, int iRow, int iColumn)
@@ -389,6 +404,10 @@ bool Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 	return spriteHit;
 }
 
+void Ppu::RenderToBuffer(const RenderOptions& options)
+{
+	RenderToBuffer(m_screenPixels, options);
+}
 
 void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& options)
 {
@@ -407,9 +426,6 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 	// Clear the SpriteZero hit flag at the beginning of rendering
 	m_ppuStatusFlags.SpriteZeroHit = false;
 
-	//if (!m_ppuMaskFlags.showBackground)
-	//	throw std::runtime_error("Unhandled: background rendering is disabled!");
-	
 	if (m_ppuMaskFlags.showBackground)
 	{
 		// Render background tiles
@@ -436,9 +452,6 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 			}
 		}
 	}
-
-	//if (!m_ppuMaskFlags.showSprites)
-	//	throw std::runtime_error("Unhandled: background rendering is disabled!");
 
 	if (m_ppuMaskFlags.showSprites)
 	{
@@ -470,6 +483,98 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 			{
 				const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
 				DrawRectangle(displayBuffer, c_nesColorRed, spriteX, spriteX + 8, spriteY, spriteY + totalPixelRows);
+			}
+		}
+	}
+}
+
+void Ppu::RenderScanline(int scanline)
+{
+	if (scanline % 8 != 0)
+		return;
+
+	const uint16_t nameTableOffset = GetBaseNametableOffset();
+	const uint16_t patternTableOffset = GetPatternTableOffset();
+
+	const int c_rows = 30;
+	const int c_columnsPerRow = 32;
+
+	ppuPixelOutputTypeBuffer_t pixelOutputTypeBuffer;
+	memset(pixelOutputTypeBuffer, 0, sizeof(pixelOutputTypeBuffer));
+
+	const int iRowPixelOffset = -(m_verticalScrollOffset % c_tileSize);
+	const int iColPixelOffset = -(m_horizontalScrollOffset % c_tileSize);
+
+	static int s_staticStuff = 0;
+	if (scanline == 128 && s_staticStuff++ % 4 == 0)
+	{
+		int i = 3;
+		i++;
+	}
+
+	if (m_ppuMaskFlags.showBackground)
+	{
+		// Render background tiles
+		for (int iRow = 0; iRow != c_rows + 1; ++iRow)
+		{
+			const uint16_t iRowTile = (iRow + (m_verticalScrollOffset / c_tileSize)) % c_rows;
+			const bool rowOverflow = (iRow + (m_verticalScrollOffset / c_tileSize)) > c_rows;
+
+			if (iRowTile != scanline/8)
+				continue;
+
+			for (int iColumn = 0; iColumn != c_columnsPerRow + 1; ++iColumn)
+			{
+				const uint16_t iColumnTile = (iColumn + (m_horizontalScrollOffset / c_tileSize)) % c_columnsPerRow;
+				const bool columnOverflow = (iColumn + (m_horizontalScrollOffset / c_tileSize)) > c_columnsPerRow;
+				const uint16_t xNametable = nameTableOffset + (columnOverflow ? 0x400 : 0) + (rowOverflow ? 0x800 : 0) & 0x2FFF;
+
+				const uint8_t tileNumber = ReadMemory8(xNametable + iRowTile * c_columnsPerRow + iColumnTile);
+				const uint8_t attributeIndex = static_cast<uint8_t>((iRowTile / 4) * 8 + (iColumnTile / 4));
+				const uint8_t attributeData = ReadMemory8(xNametable + (c_rows * c_columnsPerRow) + attributeIndex);
+				const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRowTile, iColumnTile);
+
+				DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8 + iRowPixelOffset, iColumn * 8 + iColPixelOffset, patternTableOffset, m_screenPixels, pixelOutputTypeBuffer);
+
+				if (m_renderOptions.fDrawBackgroundGrid)
+					DrawRectangle(m_screenPixels, c_nesColorGray, iColumn*8 + iColPixelOffset, (iColumn+1)*8 + iColPixelOffset,  iRow*8 + iRowPixelOffset, (iRow+1)*8 + iRowPixelOffset);
+			}
+		}
+	}
+
+	if (m_ppuMaskFlags.showSprites)
+	{
+		const int c_bytesPerSprite = 4;
+		for (int iSprite = 0; iSprite != 64; ++iSprite)
+		{
+			const size_t spriteByteOffset = iSprite * c_bytesPerSprite;
+			uint8_t spriteY = m_sprRam[spriteByteOffset + 0];
+			if (spriteY >= PPU::c_displayHeight - 2)
+				continue;
+
+			const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
+			if (spriteY > scanline || spriteY + totalPixelRows <= scanline )
+				continue;
+
+			uint8_t spriteX = m_sprRam[spriteByteOffset + 3];
+			uint8_t tileNumber = m_sprRam[spriteByteOffset + 1];
+
+			const uint8_t thirdByte = m_sprRam[spriteByteOffset + 2];
+			const uint8_t highOrderColorBits = (thirdByte & 0x3) << 2;
+			const bool isForegroundSprite = (thirdByte & 0x20) == 0;
+			const bool flipHorizontally = (thirdByte & 0x40) != 0;
+			const bool flipVertically = (thirdByte & 0x80) != 0;
+
+			const bool spriteHit = DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, m_screenPixels, pixelOutputTypeBuffer);
+
+			if (iSprite == 0 && spriteHit)
+			{
+				m_ppuStatusFlags.SpriteZeroHit = true;
+			}
+
+			if (m_renderOptions.fDrawSpriteOutline)
+			{
+				DrawRectangle(m_screenPixels, c_nesColorRed, spriteX, spriteX + 8, spriteY, spriteY + totalPixelRows);
 			}
 		}
 	}
