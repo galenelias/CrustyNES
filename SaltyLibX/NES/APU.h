@@ -97,6 +97,8 @@ public:
 
 	void WriteMemory8(uint16_t offset, uint8_t value);
 
+	void EnableSound(bool isEnabled);
+
 private:
 	void SetPulseWaveParameters(uint16_t offset, uint8_t value, _Inout_ PulseWaveParameters *pPulseWaveParameters);
 	void SetTriangleWaveParameters(uint16_t offset, uint8_t value, _Inout_ TriangleWaveParameters *pPulseWaveParameters);
@@ -113,6 +115,8 @@ private:
 	size_t m_cbPulse1AudioData = 0;
 	size_t m_cbPulse2AudioData = 0;
 	size_t m_cbTriangleAudioData = 0;
+
+	bool m_isSoundEnabled = true;
 
 	std::unique_ptr<uint8_t[]> m_spPulse1AudioData;
 	std::unique_ptr<uint8_t[]> m_spPulse2AudioData;

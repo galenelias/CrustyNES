@@ -44,7 +44,6 @@ protected:
 	CBitmap m_nesRenderBitmap;
 	BITMAPINFO m_nesRenderBitmapInfo;
 
-	//std::wostringstream m_debugOutput;
 	bool m_loggingEnabled = false;
 	std::ofstream m_debugFileOutput;
 
@@ -84,7 +83,6 @@ private:
 	IXAudio2SourceVoice* m_pSourceVoice;
 
 public:
-	afx_msg void OnBnClickedButton1();
 	afx_msg void OnBnClickedOpenRom();
 	afx_msg void OnBnClickedRunCycles();
 	afx_msg void OnBnClickedRunInfinite();
@@ -92,4 +90,5 @@ public:
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnBnClickedPlayMusic();
 	afx_msg void OnBnClickedDebugRendering();
+	afx_msg void OnBnClickedEnablesound();
 };

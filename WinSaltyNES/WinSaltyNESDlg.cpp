@@ -117,6 +117,7 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_PLAY_MUSIC, &CWinSaltyNESDlg::OnBnClickedPlayMusic)
 	ON_BN_CLICKED(IDC_DEBUG_RENDERING, &CWinSaltyNESDlg::OnBnClickedDebugRendering)
+	ON_BN_CLICKED(IDC_ENABLESOUND, &CWinSaltyNESDlg::OnBnClickedEnablesound)
 END_MESSAGE_MAP()
 
 
@@ -151,8 +152,13 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
-	OpenRomFile(L"C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes");
+	//OpenRomFile(L"C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes");
+	//OpenRomFile(L"C:\\Users\\gelias\\OneDrive\\Documents\\NES_Rom_Backups\\Donkey Kong Jr. (World) (Rev A).nes");
+	OpenRomFile(L"C:\\Users\\gelias\\Source\\Repos\\SaltyNES\\TestRoms\\nestest.nes");
 	SetupRenderBitmap();
+
+	CButton* pButton = static_cast<CButton*>(this->GetDlgItem(IDC_ENABLESOUND));
+	pButton->SetCheck(TRUE);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -307,23 +313,17 @@ HCURSOR CWinSaltyNESDlg::OnQueryDragIcon()
 
 void CWinSaltyNESDlg::PaintNESFrame(CDC* pDC)
 {
-	//DWORD* pScreenPixelsBuf = new DWORD[PPU::c_displayWidth * PPU::c_displayHeight];
-	//PPU::ppuDisplayBuffer_t* pScreenPixels = (PPU::ppuDisplayBuffer_t*) pScreenPixelsBuf;
-
 	PPU::ppuDisplayBuffer_t screenPixels;
-	PPU::ppuDisplayBuffer_t* pScreenPixels = &screenPixels;
 
-	m_nes.GetPpu().RenderToBuffer(*pScreenPixels, m_renderOptions);
+	m_nes.GetPpu().RenderToBuffer(screenPixels, m_renderOptions);
 
-	::SetDIBits(pDC->GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, *pScreenPixels, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
+	::SetDIBits(pDC->GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, screenPixels, &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
 
 	CDC memDC;
 	memDC.CreateCompatibleDC(pDC);
 	CBitmap* pOldBitmap = memDC.SelectObject(&m_nesRenderBitmap);
 	pDC->StretchBlt(0, 0, 2 * PPU::c_displayWidth, 2 * PPU::c_displayHeight, &memDC, 0, 0, PPU::c_displayWidth, PPU::c_displayHeight, SRCCOPY);
 	memDC.SelectObject(pOldBitmap);
-
-	//delete [] pScreenPixelsBuf;
 }
 
 
@@ -340,8 +340,8 @@ void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 
 		if (m_loggingEnabled)
 		{
-			std::string str = m_nes.GetCpu().GetDebugState() + "\n";
-			m_debugFileOutput.write(str.c_str(), str.size());
+			const char* pszDebugString = m_nes.GetCpu().GetDebugState();
+			m_debugFileOutput.write(pszDebugString, strlen(pszDebugString));
 		}
 
 		m_nes.RunCycle();
@@ -492,17 +492,35 @@ void CWinSaltyNESDlg::RenderFrame()
 	{
 		if (m_loggingEnabled)
 		{
-			std::string str = m_nes.GetCpu().GetDebugState() + "\n";
-			m_debugFileOutput.write(str.c_str(), str.size());
+			const char* pszDebugString = m_nes.GetCpu().GetDebugState();
+			m_debugFileOutput.write(pszDebugString, strlen(pszDebugString));
 		}
 
-		m_nes.RunCycle();
-
-		if (m_nes.GetPpu().ShouldRender())
+		try
 		{
-			CClientDC clientDC(this);
-			PaintNESFrame(&clientDC);
-			break;
+			m_nes.RunCycle();
+
+			if (m_nes.GetCyclesRanSoFar() == 17074)
+				m_debugFileOutput.flush();
+
+			if (m_nes.GetPpu().ShouldRender())
+			{
+				CClientDC clientDC(this);
+				PaintNESFrame(&clientDC);
+				break;
+			}
+		
+		}
+		catch (std::exception& e)
+		{
+			if (m_loggingEnabled)
+			{
+				char errorString[256];
+				sprintf_s(errorString, "Exception encountered: %s", e.what());
+				m_debugFileOutput.write(errorString, strlen(errorString));
+			}
+			m_runMode = NESRunMode::Paused;
+			KillTimer(TIMER_REDRAW);
 		}
 	}
 	
@@ -609,4 +627,11 @@ void CWinSaltyNESDlg::OnBnClickedDebugRendering()
 
 	m_renderOptions.fDrawBackgroundGrid = fDebugRender;
 	m_renderOptions.fDrawSpriteOutline = fDebugRender;
+}
+
+
+void CWinSaltyNESDlg::OnBnClickedEnablesound()
+{
+	bool isSoundEnabled = IsDlgButtonChecked(IDC_ENABLESOUND) != 0;
+	m_nes.GetApu().EnableSound(isSoundEnabled);
 }

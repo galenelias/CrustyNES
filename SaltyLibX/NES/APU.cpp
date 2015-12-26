@@ -416,6 +416,12 @@ inline int GetPulseFrequencyFromTimerValue(uint32_t timerPeriod)
 }
 
 
+void Apu::EnableSound(bool isEnabled)
+{
+	m_isSoundEnabled = isEnabled;
+}
+
+
 void Apu::GeneratePulseWaveAudioSourceData(const PulseWaveParameters& params, size_t *pCbAudioData, std::unique_ptr<uint8_t[]> *pAudioDataSmartPtr, IAudioSource* pAudioSource)
 {
 	int timerPeriod = params.Bytes3and4.RawPeriod;
@@ -508,6 +514,9 @@ void Apu::GenerateTriangleWaveAudioSourceData(const TriangleWaveParameters& para
 
 void Apu::WriteMemory8(uint16_t offset, uint8_t value)
 {
+	if (!m_isSoundEnabled)
+		return;
+
 	if (offset >= 0x4000 && offset < 0x4004)
 	{
 		SetPulseWaveParameters(offset - 0x4000, value, &m_pulseWave1Parameters);
