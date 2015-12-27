@@ -24,6 +24,7 @@
 
 
 const DWORD TIMER_REDRAW = 0;
+const DWORD TIMER_SOUNDREFRESH = 1;
 
 class CWin32ReadOnlyFile : public IReadableFile
 {
@@ -118,6 +119,7 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_PLAY_MUSIC, &CWinSaltyNESDlg::OnBnClickedPlayMusic)
 	ON_BN_CLICKED(IDC_DEBUG_RENDERING, &CWinSaltyNESDlg::OnBnClickedDebugRendering)
 	ON_BN_CLICKED(IDC_ENABLESOUND, &CWinSaltyNESDlg::OnBnClickedEnablesound)
+	ON_BN_CLICKED(IDC_STOP_MUSIC, &CWinSaltyNESDlg::OnBnClickedStopMusic)
 END_MESSAGE_MAP()
 
 
@@ -151,14 +153,17 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	//  when the application's main window is not a dialog
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
-
 	//OpenRomFile(L"C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes");
 	//OpenRomFile(L"C:\\Users\\gelias\\OneDrive\\Documents\\NES_Rom_Backups\\Donkey Kong Jr. (World) (Rev A).nes");
-	OpenRomFile(L"C:\\Users\\gelias\\Source\\Repos\\SaltyNES\\TestRoms\\sprite_hit_tests_2005.10.05\\01.basics.nes");
+	OpenRomFile(L"C:\\Users\\gelias\\OneDrive\\Documents\\NES_Rom_Backups\\LegendOfZelda.nes");
+	//OpenRomFile(L"C:\\Users\\gelias\\Source\\Repos\\SaltyNES\\TestRoms\\sprite_hit_tests_2005.10.05\\01.basics.nes");
 	SetupRenderBitmap();
 
+	// Set controls initial states
 	CButton* pButton = static_cast<CButton*>(this->GetDlgItem(IDC_ENABLESOUND));
 	pButton->SetCheck(TRUE);
+	SetDlgItemTextW(IDC_EDIT_WAVE_HZ, L"200");
+
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -374,9 +379,23 @@ void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 	SetDlgItemTextW(IDC_PROGRAM_COUNTER, wzProgramCounter);
 }
 
+
+void CWinSaltyNESDlg::PlayRandomAudio()
+{
+	CStringW strHz;
+	GetDlgItemTextW(IDC_EDIT_WAVE_HZ, strHz);
+
+	int hz = wcstol((LPCWSTR)strHz, nullptr, 10);
+	PlayRandomAudio(hz);
+}
+
+
 void CWinSaltyNESDlg::PlayRandomAudio(int hz)
 {
 	HRESULT hr = S_OK;
+
+	if (hz == 0)
+		return;
 
 	if (m_pXAudio == nullptr)
 	{
@@ -394,8 +413,6 @@ void CWinSaltyNESDlg::PlayRandomAudio(int hz)
 	const int c_samplesPerSecond = 44100;
 	const int c_bytesPerSample = 2;
 
-	byte soundData[2 * c_samplesPerSecond];
-
 	if (m_pSourceVoice == nullptr)
 	{
 		// Create a source voice
@@ -407,29 +424,41 @@ void CWinSaltyNESDlg::PlayRandomAudio(int hz)
 		waveformat.nBlockAlign = c_bytesPerSample;
 		waveformat.wBitsPerSample = c_bytesPerSample * 8;
 		waveformat.cbSize = 0;
-		hr = m_pXAudio->CreateSourceVoice(&m_pSourceVoice, &waveformat);
+		hr = m_pXAudio->CreateSourceVoice(&m_pSourceVoice, &waveformat, 0 /*flags*/, XAUDIO2_DEFAULT_FREQ_RATIO,
+			this);
 		if (FAILED(hr))
 			return;
 
 		m_pSourceVoice->SetVolume(0.1f);
 	}
 
-	// Start the source voice
-	hr = m_pSourceVoice->Stop();
-	if (FAILED(hr))
+	const int c_samplesPerBuffer = 2;
+	if (m_buffersInUse == c_samplesPerBuffer)
 		return;
 
-	hr = m_pSourceVoice->Start();
-	if (FAILED(hr))
-		return;
+	// This should be redundant with our explicit buffersInUse tracking
+	//XAUDIO2_VOICE_STATE voiceState;
+	//m_pSourceVoice->GetState(&voiceState, XAUDIO2_VOICE_NOSAMPLESPLAYED);
+	//if (voiceState.BuffersQueued > 1)
+	//	return;
+
+	// Rotate samples in a single static buffer
+	const int c_bytesPerDeciSecond = c_samplesPerSecond / 10 * 2;
+	static byte s_soundData[c_samplesPerBuffer * c_bytesPerDeciSecond];
+	static int s_bufferSampleOffset = 0;
+	byte* soundData = s_soundData + s_bufferSampleOffset * c_bytesPerDeciSecond;
+	s_bufferSampleOffset++;
+	s_bufferSampleOffset %= c_samplesPerBuffer;
 
 	int c_wavesPerSec = hz;
+	int c_wavesPerDeciSec = hz / 10;
 	int c_samplesPerWave = 44100 / c_wavesPerSec;
 
 	// Fill the array with sound data
-	for (int index = 0, second = 0; second < 1; second++)
+	const int c_deciSeconds = 1;
+	for (int index = 0, second = 0; second < c_deciSeconds; second++)
 	{
-		for (int cycle = 0; cycle < c_wavesPerSec; cycle++)
+		for (int cycle = 0; cycle < c_wavesPerDeciSec; cycle++)
 		{
 			for (int sample = 0; sample < c_samplesPerWave; sample++)
 			{
@@ -442,17 +471,25 @@ void CWinSaltyNESDlg::PlayRandomAudio(int hz)
 
 	// Create a button to reference the byte array
 	XAUDIO2_BUFFER buffer = { 0 };
-	buffer.AudioBytes = c_samplesPerWave * c_bytesPerSample;
+	buffer.AudioBytes = c_deciSeconds * c_wavesPerDeciSec * c_samplesPerWave * c_bytesPerSample;
 	buffer.pAudioData = soundData;
 	buffer.Flags = XAUDIO2_END_OF_STREAM;
-	buffer.PlayBegin = 0;
-	buffer.PlayLength = 0;
-	buffer.LoopCount = XAUDIO2_LOOP_INFINITE;
+
+	//XAUDIO2_VOICE_STATE voiceState;
+	//m_pSourceVoice->GetState(&voiceState, 0);
+
 	// Submit the buffer
+	++m_buffersInUse;
 	hr = m_pSourceVoice->SubmitSourceBuffer(&buffer);
 	if (FAILED(hr))
 		return;
 }
+
+STDMETHODIMP_(void) CWinSaltyNESDlg::OnBufferEnd(void* /*pBufferContext*/)
+{
+	--m_buffersInUse;
+}
+
 
 void CWinSaltyNESDlg::OnBnClickedOpenRom()
 {
@@ -504,6 +541,7 @@ void CWinSaltyNESDlg::RenderFrame()
 
 			if (m_nes.GetPpu().ShouldRender())
 			{
+				m_nes.GetApu().PushAudio();
 				CClientDC clientDC(this);
 				PaintNESFrame(&clientDC);
 				break;
@@ -562,6 +600,9 @@ void CWinSaltyNESDlg::OnTimer(UINT_PTR nIDEvent)
 	case TIMER_REDRAW:
 		RenderFrame();
 		break;
+	case TIMER_SOUNDREFRESH:
+		PlayRandomAudio();
+		break;
 	}
 
 	CDialogEx::OnTimer(nIDEvent);
@@ -600,27 +641,43 @@ BOOL CWinSaltyNESDlg::PreTranslateMessage(MSG* pMsg)
 	if (pMsg->message == WM_KEYDOWN || pMsg->message == WM_KEYUP)
 	{
 		// Intercept key presses-
-		NES::ControllerInput nesInput = MapVirtualKeyToNesInput(pMsg->wParam);
-		if (nesInput != NES::ControllerInput::_Max)
-		{
-			m_nes.UseController1().SetInputStatus(nesInput, (pMsg->message == WM_KEYDOWN));
-			return TRUE;
-		}
+		//NES::ControllerInput nesInput = MapVirtualKeyToNesInput(pMsg->wParam);
+		//if (nesInput != NES::ControllerInput::_Max)
+		//{
+		//	m_nes.UseController1().SetInputStatus(nesInput, (pMsg->message == WM_KEYDOWN));
+		//	return TRUE;
+		//}
 	}
 	return FALSE;
 }
 
 
-
-
 void CWinSaltyNESDlg::OnBnClickedPlayMusic()
 {
-	CStringW strHz;
-	GetDlgItemTextW(IDC_EDIT_WAVE_HZ, strHz);
+	PlayRandomAudio();
+	SetTimer(TIMER_SOUNDREFRESH, 90, nullptr);
 
-	int hz = wcstol((LPCWSTR)strHz, nullptr, 10);
+	if (m_pSourceVoice != nullptr)
+	{
+		HRESULT hr = m_pSourceVoice->Start();
+		if (FAILED(hr))
+			return;
+	}
 
-	PlayRandomAudio(hz);
+}
+
+
+void CWinSaltyNESDlg::OnBnClickedStopMusic()
+{
+	// Stop the source voice
+	if (m_pSourceVoice != nullptr)
+	{
+		HRESULT hr = m_pSourceVoice->Stop();
+		if (FAILED(hr))
+			return;
+	}
+
+	KillTimer(TIMER_SOUNDREFRESH);
 }
 
 
