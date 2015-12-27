@@ -17,6 +17,7 @@ void NES::RunCycle()
 
 	const uint32_t cpuCycles = GetCpu().RunNextInstruction();
 	GetPpu().AddCycles(cpuCycles);
+	GetApu().AddCycles(cpuCycles);
 }
 
 

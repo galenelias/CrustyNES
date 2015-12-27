@@ -4,238 +4,11 @@
 
 #include "Objbase.h"
 #include <stdexcept>
-//#include <atlbase.h>
 
 #include <xaudio2.h>
 #include <algorithm>
 
-
-template <class T>
-class _NoAddRefReleaseOnCComPtr : 
-	public T
-{
-private:
-	STDMETHOD_(ULONG, AddRef)()=0;
-	STDMETHOD_(ULONG, Release)()=0;
-};
-
-template <class T>
-class CComPtrBase
-{
-protected:
-	CComPtrBase() throw()
-	{
-		p = NULL;
-	}
-	CComPtrBase(_Inout_opt_ T* lp) throw()
-	{
-		p = lp;
-		if (p != NULL)
-			p->AddRef();
-	}
-	void Swap(CComPtrBase& other)
-	{
-		T* pTemp = p;
-		p = other.p;
-		other.p = pTemp;
-	}
-public:
-	typedef T _PtrClass;
-	~CComPtrBase() throw()
-	{
-		if (p)
-			p->Release();
-	}
-	operator T*() const throw()
-	{
-		return p;
-	}
-	T& operator*() const
-	{
-		ATLENSURE(p!=NULL);
-		return *p;
-	}
-	//The assert on operator& usually indicates a bug.  If this is really
-	//what is needed, however, take the address of the p member explicitly.
-	T** operator&() throw()
-	{
-		return &p;
-	}
-	_NoAddRefReleaseOnCComPtr<T>* operator->() const throw()
-	{
-		return (_NoAddRefReleaseOnCComPtr<T>*)p;
-	}
-	bool operator!() const throw()
-	{	
-		return (p == NULL);
-	}
-	bool operator<(_In_opt_ T* pT) const throw()
-	{
-		return p < pT;
-	}
-	bool operator!=(_In_opt_ T* pT) const
-	{
-		return !operator==(pT);
-	}
-	bool operator==(_In_opt_ T* pT) const throw()
-	{
-		return p == pT;
-	}
-
-	// Release the interface and set to NULL
-	void Release() throw()
-	{
-		T* pTemp = p;
-		if (pTemp)
-		{
-			p = NULL;
-			pTemp->Release();
-		}
-	}
-	// Compare two objects for equivalence
-	bool IsEqualObject(_Inout_opt_ IUnknown* pOther) throw()
-	{
-		if (p == NULL && pOther == NULL)
-			return true;	// They are both NULL objects
-
-		if (p == NULL || pOther == NULL)
-			return false;	// One is NULL the other is not
-
-		CComPtr<IUnknown> punk1;
-		CComPtr<IUnknown> punk2;
-		p->QueryInterface(__uuidof(IUnknown), (void**)&punk1);
-		pOther->QueryInterface(__uuidof(IUnknown), (void**)&punk2);
-		return punk1 == punk2;
-	}
-	// Attach to an existing interface (does not AddRef)
-	void Attach(_In_opt_ T* p2) throw()
-	{
-		if (p)
-		{
-			ULONG ref = p->Release();
-			(ref);
-			// Attaching to the same object only works if duplicate references are being coalesced.  Otherwise
-			// re-attaching will cause the pointer to be released and may cause a crash on a subsequent dereference.
-		}
-		p = p2;
-	}
-	// Detach the interface (does not Release)
-	T* Detach() throw()
-	{
-		T* pt = p;
-		p = NULL;
-		return pt;
-	}
-	_Check_return_ HRESULT CopyTo(_COM_Outptr_result_maybenull_ T** ppT) throw()
-	{
-		if (ppT == NULL)
-			return E_POINTER;
-		*ppT = p;
-		if (p)
-			p->AddRef();
-		return S_OK;
-	}
-	_Check_return_ HRESULT SetSite(_Inout_opt_ IUnknown* punkParent) throw()
-	{
-		return AtlSetChildSite(p, punkParent);
-	}
-	_Check_return_ HRESULT Advise(
-		_Inout_ IUnknown* pUnk, 
-		_In_ const IID& iid, 
-		_Out_ LPDWORD pdw) throw()
-	{
-		return AtlAdvise(p, pUnk, iid, pdw);
-	}
-	_Check_return_ HRESULT CoCreateInstance(
-		_In_ REFCLSID rclsid, 
-		_Inout_opt_ LPUNKNOWN pUnkOuter = NULL, 
-		_In_ DWORD dwClsContext = CLSCTX_ALL) throw()
-	{
-		return ::CoCreateInstance(rclsid, pUnkOuter, dwClsContext, __uuidof(T), (void**)&p);
-	}
-#ifdef _ATL_USE_WINAPI_FAMILY_DESKTOP_APP
-	_Check_return_ HRESULT CoCreateInstance(
-		_In_z_ LPCOLESTR szProgID, 
-		_Inout_opt_ LPUNKNOWN pUnkOuter = NULL, 
-		_In_ DWORD dwClsContext = CLSCTX_ALL) throw()
-	{
-		CLSID clsid;
-		HRESULT hr = CLSIDFromProgID(szProgID, &clsid);
-		if (SUCCEEDED(hr))
-			hr = ::CoCreateInstance(clsid, pUnkOuter, dwClsContext, __uuidof(T), (void**)&p);
-		return hr;
-	}
-#endif // _ATL_USE_WINAPI_FAMILY_DESKTOP_APP
-	template <class Q>
-	_Check_return_ HRESULT QueryInterface(_Outptr_ Q** pp) const throw()
-	{
-		return p->QueryInterface(__uuidof(Q), (void**)pp);
-	}
-	T* p;
-};
-
-template <class T>
-class CComPtr : 
-	public CComPtrBase<T>
-{
-public:
-	CComPtr() throw()
-	{
-	}
-	CComPtr(_Inout_opt_ T* lp) throw() :
-		CComPtrBase<T>(lp)
-	{
-	}
-	CComPtr(_Inout_ const CComPtr<T>& lp) throw() :
-		CComPtrBase<T>(lp.p)
-	{	
-	}
-	T* operator=(_Inout_opt_ T* lp) throw()
-	{
-		if(*this!=lp)
-		{
-			CComPtr(lp).Swap(*this);
-		}
-		return *this;
-	}
-	template <typename Q>
-	T* operator=(_Inout_ const CComPtr<Q>& lp) throw()
-	{
-		if( !IsEqualObject(lp) )
-		{
-			return static_cast<T*>(AtlComQIPtrAssign((IUnknown**)&p, lp, __uuidof(T)));
-		}
-		return *this;
-	}
-	T* operator=(_Inout_ const CComPtr<T>& lp) throw()
-	{
-		if(*this!=lp)
-		{
-			CComPtr(lp).Swap(*this);
-		}
-		return *this;
-	}	
-	CComPtr(_Inout_ CComPtr<T>&& lp) throw() :	
-		CComPtrBase<T>()
-	{	
-		lp.Swap(*this);
-	}	
-	T* operator=(_Inout_ CComPtr<T>&& lp) throw()
-	{			
-		if (*this != lp)
-		{
-			CComPtr(static_cast<CComPtr&&>(lp)).Swap(*this);
-		}
-		return *this;		
-	}
-};
-
-
-void VerifyHr(HRESULT hr)
-{
-	if (FAILED(hr))
-		throw std::runtime_error("Unexpected bad HRESULT");
-}
+#include "../Util/ComPtr.h"
 
 namespace NES { namespace APU {
 
@@ -359,20 +132,26 @@ void XAudioSource::Initialize(IXAudio2* pXAudio)
 }
 void XAudioSource::SetChannelData(const uint8_t* pData, size_t cbData, bool /*shouldLoop*/)
 {
+	XAUDIO2_VOICE_STATE voiceState;
+	m_pXAudioSourceVoice->GetState(&voiceState, 0);
+
+	if (voiceState.BuffersQueued > 1)
+		return;
+
 	XAUDIO2_BUFFER buffer = { 0 };
 	buffer.AudioBytes = static_cast<uint32_t>(cbData);
 	buffer.pAudioData = reinterpret_cast<const BYTE*>(pData);
-	buffer.Flags = XAUDIO2_END_OF_STREAM;
 	buffer.PlayBegin = 0;
 	buffer.PlayLength = 0;
-	buffer.LoopCount = 200; // TODO: Real sample length
+	//buffer.LoopCount = 2; // TODO: Real sample length
+	//buffer.LoopCount = 200; // TODO: Real sample length
 
-	m_pXAudioSourceVoice->ExitLoop();
-	m_pXAudioSourceVoice->Stop();
-	m_pXAudioSourceVoice->FlushSourceBuffers();
+	//m_pXAudioSourceVoice->ExitLoop();
+	//m_pXAudioSourceVoice->Stop();
+	//m_pXAudioSourceVoice->FlushSourceBuffers();
 
-	XAUDIO2_VOICE_STATE state;
-	m_pXAudioSourceVoice->GetState(&state, 0);
+	//XAUDIO2_VOICE_STATE state;
+	//m_pXAudioSourceVoice->GetState(&state, 0);
 
 	VerifyHr(m_pXAudioSourceVoice->SubmitSourceBuffer(&buffer));
 }
@@ -512,6 +291,88 @@ void Apu::GenerateTriangleWaveAudioSourceData(const TriangleWaveParameters& para
 	pAudioSource->Play();
 }
 
+
+void Apu::AddCycles(uint32_t cpuCycles)
+{
+	m_accumulatedCpuCycles += cpuCycles;
+}
+
+void Apu::PushAudio()
+{
+
+	static const int16_t dutyCycleSequences[4][8] = 
+	{ { SHRT_MIN, SHRT_MAX, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN }, // 01000000
+	{ SHRT_MIN, SHRT_MAX, SHRT_MAX, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN }, // 01100000
+	{ SHRT_MIN, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MIN, SHRT_MIN, SHRT_MIN }, // 01111000
+	{ SHRT_MAX, SHRT_MIN, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MAX }, // 10011111
+	};
+
+
+	if (m_spAudioData == nullptr)
+	{
+		m_cbAudioData = m_spPulse1AudioSource->GetSamplesPerSecond() * m_spPulse1AudioSource->GetBytesPerSample();
+		m_spAudioData =	std::make_unique<uint8_t[]>(m_cbAudioData);
+		m_audioWriteOffset = 0;
+	}
+
+	const uint32_t c_cpuCyclesPerSecond = 1789773;
+	uint32_t milliSecondsToPush = m_accumulatedCpuCycles * 1000 / c_cpuCyclesPerSecond;
+	uint32_t samplesToGenerate = milliSecondsToPush * m_spPulse1AudioSource->GetSamplesPerSecond() / 1000;
+
+	uint32_t cbBufferData = milliSecondsToPush * m_spPulse1AudioSource->GetSamplesPerSecond() / 1000 * m_spPulse1AudioSource->GetBytesPerSample();
+	if (m_audioWriteOffset + cbBufferData >= m_cbAudioData)
+		m_audioWriteOffset = 0;
+
+	uint8_t* pBufferData = m_spAudioData.get() + m_audioWriteOffset;
+	m_audioWriteOffset += cbBufferData;
+	memset(pBufferData, 0, cbBufferData);
+
+	for (int iWave = 0; iWave < 2; ++iWave)
+	{
+		const auto& params = iWave == 0 ? m_pulseWave1Parameters : m_pulseWave2Parameters;
+		int timerPeriod = params.Bytes3and4.RawPeriod;
+		int pulseFrequency = GetPulseFrequencyFromTimerValue(timerPeriod);
+
+		if (timerPeriod < 8 || (params.Byte1.ConstantVolumeFlag == 1 && params.Byte1.Volume == 0))
+		{
+			continue;
+			//m_spPulse1AudioSource->Stop();
+			//return;
+		}
+
+		const int samplesPerSecond = m_spPulse1AudioSource->GetSamplesPerSecond();
+		const int samplesPerWave = samplesPerSecond / pulseFrequency;
+
+		int16_t* pSampleData = reinterpret_cast<int16_t*>(pBufferData);
+		const int samplesPerCycleEntry = std::max(1, samplesPerWave / 8);
+
+		uint32_t index = 0;
+		const int16_t* pDutySequence = dutyCycleSequences[params.Byte1.DutyCycle];
+		uint32_t totalSamples = cbBufferData / m_spPulse1AudioSource->GetBytesPerSample();
+		while (index < totalSamples)
+		{
+			for (int sample = 0; sample < samplesPerWave && index < totalSamples; ++sample)
+			{
+				int16_t sampleEntry = pDutySequence[(sample / samplesPerCycleEntry) % 8];
+				if ((int)sampleEntry + pSampleData[index] < SHRT_MIN)
+					pSampleData[index] = SHRT_MIN;
+				else if ((int)sampleEntry + pSampleData[index] > SHRT_MAX)
+					pSampleData[index] = SHRT_MAX;
+				else
+					pSampleData[index] += sampleEntry;
+
+				++index;
+			}
+		}
+	}
+
+	m_spPulse1AudioSource->SetChannelData(pBufferData, cbBufferData, false /*shouldLoop*/);
+	m_spPulse1AudioSource->Play();
+
+	m_accumulatedCpuCycles = 0;
+}
+
+
 void Apu::WriteMemory8(uint16_t offset, uint8_t value)
 {
 	if (!m_isSoundEnabled)
@@ -520,12 +381,12 @@ void Apu::WriteMemory8(uint16_t offset, uint8_t value)
 	if (offset >= 0x4000 && offset < 0x4004)
 	{
 		SetPulseWaveParameters(offset - 0x4000, value, &m_pulseWave1Parameters);
-		GeneratePulseWaveAudioSourceData(m_pulseWave1Parameters, &m_cbPulse1AudioData, &m_spPulse1AudioData, m_spPulse1AudioSource.get());
+		//GeneratePulseWaveAudioSourceData(m_pulseWave1Parameters, &m_cbPulse1AudioData, &m_spPulse1AudioData, m_spPulse1AudioSource.get());
 	}
 	else if (offset >= 0x4004 && offset < 0x4008)
 	{
 		SetPulseWaveParameters(offset - 0x4004, value, &m_pulseWave2Parameters);
-		GeneratePulseWaveAudioSourceData(m_pulseWave2Parameters, &m_cbPulse2AudioData, &m_spPulse2AudioData, m_spPulse2AudioSource.get());
+		//GeneratePulseWaveAudioSourceData(m_pulseWave2Parameters, &m_cbPulse2AudioData, &m_spPulse2AudioData, m_spPulse2AudioSource.get());
 	}
 	else if (offset >= 0x4008 && offset < 0x400C)
 	{

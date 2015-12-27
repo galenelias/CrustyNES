@@ -95,7 +95,9 @@ class Apu
 public:
 	Apu();
 
+	void AddCycles(uint32_t cpuCycles);
 	void WriteMemory8(uint16_t offset, uint8_t value);
+	void PushAudio();
 
 	void EnableSound(bool isEnabled);
 
@@ -117,6 +119,12 @@ private:
 	size_t m_cbTriangleAudioData = 0;
 
 	bool m_isSoundEnabled = true;
+	uint32_t m_accumulatedCpuCycles = 0;
+
+	std::unique_ptr<uint8_t[]> m_spAudioData;
+	uint32_t m_cbAudioData = 0;
+	uint32_t m_audioWriteOffset = 0;
+	//uint32_t m_queuedBuffers = 0;
 
 	std::unique_ptr<uint8_t[]> m_spPulse1AudioData;
 	std::unique_ptr<uint8_t[]> m_spPulse2AudioData;
