@@ -143,8 +143,6 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CoreUtils.h" />
-    <ClInclude Include="MovingAverage.h" />
     <ClInclude Include="NES\APU.h" />
     <ClInclude Include="NES\Controller.h" />
     <ClInclude Include="NES\Cpu6502.h" />
@@ -154,11 +152,12 @@
     <ClInclude Include="NES\NES.h" />
     <ClInclude Include="NES\NESRom.h" />
     <ClInclude Include="NES\Ppu.h" />
-    <ClInclude Include="SaltyLib.h" />
-    <ClInclude Include="SaltyLibX.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="Stopwatch.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Util\ComPtr.h" />
+    <ClInclude Include="Util\CoreUtils.h" />
+    <ClInclude Include="Util\MovingAverage.h" />
+    <ClInclude Include="Util\Stopwatch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NES\APU.cpp" />

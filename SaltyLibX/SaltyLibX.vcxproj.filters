@@ -22,6 +22,12 @@
     <Filter Include="Source Files\Util">
       <UniqueIdentifier>{63e989c6-41b2-49b7-9745-eede881a8e42}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\NES">
+      <UniqueIdentifier>{6754e34d-ad5e-4d98-b4ee-754166e6ee4c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Util">
+      <UniqueIdentifier>{84ecfbd7-4eb1-4e98-8b5d-b6749e459711}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -33,47 +39,44 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SaltyLibX.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CoreUtils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MovingAverage.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SaltyLib.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Stopwatch.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="NES\APU.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="NES\Controller.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="NES\Cpu6502.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="NES\IMapper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="NES\NES.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="NES\NESRom.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="NES\Ppu.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="NES\Mappers\BasePpuMemoryMap.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="NES\Mappers\BaseMapper.h">
       <Filter>Source Files\NES\Mappers</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\APU.h">
+      <Filter>Header Files\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\Mappers\BasePpuMemoryMap.h">
+      <Filter>Header Files\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\Controller.h">
+      <Filter>Header Files\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\Cpu6502.h">
+      <Filter>Header Files\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\IMapper.h">
+      <Filter>Header Files\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\NES.h">
+      <Filter>Header Files\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\NESRom.h">
+      <Filter>Header Files\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\Ppu.h">
+      <Filter>Header Files\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\CoreUtils.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\MovingAverage.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\Stopwatch.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\ComPtr.h">
+      <Filter>Header Files\Util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
