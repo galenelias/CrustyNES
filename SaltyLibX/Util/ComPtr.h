@@ -1,5 +1,8 @@
 #pragma once
 
+#include <stdexcept>
+#include <combaseapi.h>
+
 template <class T>
 class _NoAddRefReleaseOnCComPtr : 
 	public T
@@ -221,7 +224,7 @@ public:
 };
 
 
-void VerifyHr(HRESULT hr)
+inline void VerifyHr(HRESULT hr)
 {
 	if (FAILED(hr))
 		throw std::runtime_error("Unexpected bad HRESULT");

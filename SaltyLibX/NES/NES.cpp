@@ -1,14 +1,18 @@
 #include "stdafx.h"
 #include "NES.h"
+#include "APU_blargg.h"
 
 namespace NES
 {
 
 
 NES::NES()
-	: m_cpu(*this)
+	: m_spApu(APU::CreateApu())
+	//: m_spApu(APU::blargg::CreateBlarggApu())
+	, m_cpu(*this)
 	, m_ppu(m_cpu)
 {
+	
 }
 
 void NES::RunCycle()

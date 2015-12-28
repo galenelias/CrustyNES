@@ -2,182 +2,130 @@
 
 #include "APU.h"
 
-#include "Objbase.h"
 #include <stdexcept>
 
-#include <xaudio2.h>
 #include <algorithm>
 
 #include "../Util/ComPtr.h"
+#include "../Util/IAudioDevice.h"
+
 
 namespace NES { namespace APU {
 
-class ComInitializer
+const uint32_t c_cpuCyclesPerSecond = 1789773;
+
+
+struct PulseWaveParameters
 {
-public:
-	~ComInitializer()
+	union
 	{
-		if (m_shouldUninitializeCom)
-			CoUninitialize();
-	}
+		uint8_t ByteValue;
+		struct
+		{
+			uint8_t Volume:4;
+			uint8_t ConstantVolumeFlag:1;
+			uint8_t APULengthCounter:1;
+			uint8_t DutyCycle:2;
+		};
+	} Byte1;
 
-	void InitializeCom(DWORD dwCoInit)
+	uint8_t Byte2;
+
+	union
 	{
-		VerifyHr(CoInitializeEx(NULL, dwCoInit));
-		m_shouldUninitializeCom = true;
-	}
+		struct
+		{
+			uint8_t Byte3Value;
+			uint8_t Byte4Value;
+		};
+		struct
+		{
+			uint16_t RawPeriod:11;
+			uint16_t LengthCounterLoad:5;
+		};
 
-	void UninitializeCom() _NOEXCEPT
-	{
-		if (m_shouldUninitializeCom)
-			CoUninitialize();
-		m_shouldUninitializeCom = false;
-	}
-
-private:
-	bool m_shouldUninitializeCom = false;
+	} Bytes3and4;
 };
 
-class XAudioDevice : public IAudioDevice
+struct TriangleWaveParameters
 {
-public:
-	XAudioDevice();
-	~XAudioDevice();
-
-	void Initialize();
-
-	virtual std::shared_ptr<IAudioSource> AddAudioSource() override;
-
-private:
-	ComInitializer m_autoComInitializer;
-	CComPtr<IXAudio2> m_spXAudio2;
-	IXAudio2MasteringVoice* m_pMasteringVoice = nullptr;
-};
-
-
-XAudioDevice::XAudioDevice()
-{
-
-}
-
-XAudioDevice::~XAudioDevice()
-{
-	CoUninitialize();
-}
-
-void XAudioDevice::Initialize()
-{
-	m_autoComInitializer.InitializeCom(COINIT_APARTMENTTHREADED);
-	VerifyHr(XAudio2Create(&m_spXAudio2));
-
-	VerifyHr(m_spXAudio2->CreateMasteringVoice(&m_pMasteringVoice));
-
-}
-
-class XAudioSource : public IAudioSource
-{
-public:
-	~XAudioSource();
-	void Initialize(IXAudio2* pXAudio);
-
-	static const int c_samplesPerSecond = 44100;
-	static const int c_bitsPerSample = 16;
-
-	virtual uint32_t GetBytesPerSample() const override { return c_bitsPerSample / 8; }
-	virtual uint32_t GetSamplesPerSecond() const override { return c_samplesPerSecond; }
-
-	virtual void SetVolume(float volume) override;
-	virtual void SetChannelData(const uint8_t* pData, size_t cbData, bool shouldLoop) override;
-	virtual void Play() override;
-	virtual void Stop() override;
-
-private:
-	IXAudio2SourceVoice* m_pXAudioSourceVoice = nullptr;
-};
-
-XAudioSource::~XAudioSource()
-{
-	if (m_pXAudioSourceVoice != nullptr)
+	union
 	{
-		m_pXAudioSourceVoice->DestroyVoice();
-		m_pXAudioSourceVoice = nullptr;
-	}
-}
+		uint8_t ByteValue;
+		struct
+		{
+			uint8_t LinearCounterLoad:7;
+			uint8_t LinearCounterHalt:1;
+		};
+	} Byte1;
 
-std::shared_ptr<IAudioSource> XAudioDevice::AddAudioSource()
+	uint8_t Byte2;
+
+	union
+	{
+		struct
+		{
+			uint8_t Byte3Value;
+			uint8_t Byte4Value;
+		};
+		struct
+		{
+			uint16_t RawPeriod:11;
+			uint16_t LengthCounterLoad:5;
+		};
+
+	} Bytes3and4;
+};
+
+class Apu : public IApu
 {
-	auto spAudioSource = std::make_shared<XAudioSource>();
-	spAudioSource->Initialize(m_spXAudio2);
+public:
+	Apu();
 
-	return spAudioSource;
-}
+	virtual void AddCycles(uint32_t cpuCycles) override;
+	virtual void WriteMemory8(uint16_t offset, uint8_t value) override;
+	virtual uint8_t ReadStatus() override;
+	virtual void PushAudio() override;
 
+	void EnableSound(bool isEnabled) override;
 
-void XAudioSource::Initialize(IXAudio2* pXAudio)
-{
-	// Create a source voice
-	WAVEFORMATEX waveformat;
-	waveformat.wFormatTag = WAVE_FORMAT_PCM;
-	waveformat.nChannels = 1;
-	waveformat.nSamplesPerSec = c_samplesPerSecond;
-	waveformat.nAvgBytesPerSec = c_samplesPerSecond * GetBytesPerSample();
-	waveformat.nBlockAlign = static_cast<WORD>(GetBytesPerSample());
-	waveformat.wBitsPerSample = XAudioSource::c_bitsPerSample;
-	waveformat.cbSize = 0;
+private:
+	void SetPulseWaveParameters(uint16_t offset, uint8_t value, _Inout_ PulseWaveParameters *pPulseWaveParameters);
+	void SetTriangleWaveParameters(uint16_t offset, uint8_t value, _Inout_ TriangleWaveParameters *pPulseWaveParameters);
 
-	VerifyHr(pXAudio->CreateSourceVoice(&m_pXAudioSourceVoice, &waveformat));
+	void GeneratePulseWaveAudioSourceData(const PulseWaveParameters& params, size_t *pCbAudioData, std::unique_ptr<uint8_t[]> *pAudioDataSmartPtr, IAudioSource* pAudioSource);
+	void GenerateTriangleWaveAudioSourceData(const TriangleWaveParameters& params, size_t *pCbAudioData, std::unique_ptr<uint8_t[]> *pAudioDataSmartPtr, IAudioSource* pAudioSource);
 
-	SetVolume(1.0f);
+	PulseWaveParameters m_pulseWave1Parameters;
+	PulseWaveParameters m_pulseWave2Parameters;
+	TriangleWaveParameters m_triangleWaveParameters;
 
-}
-void XAudioSource::SetChannelData(const uint8_t* pData, size_t cbData, bool /*shouldLoop*/)
-{
-	XAUDIO2_VOICE_STATE voiceState;
-	m_pXAudioSourceVoice->GetState(&voiceState, 0);
+	std::shared_ptr<IAudioDevice> m_spAudioDevice;
 
-	if (voiceState.BuffersQueued > 1)
-		return;
+	size_t m_cbPulse1AudioData = 0;
+	size_t m_cbPulse2AudioData = 0;
+	size_t m_cbTriangleAudioData = 0;
 
-	XAUDIO2_BUFFER buffer = { 0 };
-	buffer.AudioBytes = static_cast<uint32_t>(cbData);
-	buffer.pAudioData = reinterpret_cast<const BYTE*>(pData);
-	buffer.PlayBegin = 0;
-	buffer.PlayLength = 0;
-	//buffer.LoopCount = 2; // TODO: Real sample length
-	//buffer.LoopCount = 200; // TODO: Real sample length
+	bool m_isSoundEnabled = true;
+	uint32_t m_accumulatedCpuCycles = 0;
 
-	//m_pXAudioSourceVoice->ExitLoop();
-	//m_pXAudioSourceVoice->Stop();
-	//m_pXAudioSourceVoice->FlushSourceBuffers();
+	std::unique_ptr<uint8_t[]> m_spAudioData;
+	uint32_t m_cbAudioData = 0;
+	uint32_t m_audioWriteOffset = 0;
+	//uint32_t m_queuedBuffers = 0;
 
-	//XAUDIO2_VOICE_STATE state;
-	//m_pXAudioSourceVoice->GetState(&state, 0);
+	std::unique_ptr<uint8_t[]> m_spPulse1AudioData;
+	std::unique_ptr<uint8_t[]> m_spPulse2AudioData;
+	std::unique_ptr<uint8_t[]> m_spTriangleAudioData;
 
-	VerifyHr(m_pXAudioSourceVoice->SubmitSourceBuffer(&buffer));
-}
+	std::shared_ptr<IAudioSource> m_spPulse1AudioSource;
+	std::shared_ptr<IAudioSource> m_spPulse2AudioSource;
+	std::shared_ptr<IAudioSource> m_spTriangleAudioSource;
 
-void XAudioSource::Play()
-{
-	VerifyHr(m_pXAudioSourceVoice->Start());
-}
+	Blip_Buffer m_blipBuf;
+	Nes_Apu m_nesApu;
+};
 
-void XAudioSource::Stop()
-{
-	VerifyHr(m_pXAudioSourceVoice->Stop());
-}
-
-void XAudioSource::SetVolume(float volume)
-{
-	static const float c_baseVolume = 0.1f;
-	m_pXAudioSourceVoice->SetVolume(volume * c_baseVolume);
-}
-
-std::shared_ptr<IAudioDevice> CreateXAudioDevice()
-{
-	auto spXAudioDevice = std::make_shared<XAudioDevice>();
-	spXAudioDevice->Initialize();
-	return spXAudioDevice;
-}
 
 Apu::Apu()
 {
@@ -186,6 +134,11 @@ Apu::Apu()
 	m_spPulse1AudioSource = m_spAudioDevice->AddAudioSource();
 	m_spPulse2AudioSource = m_spAudioDevice->AddAudioSource();
 	m_spTriangleAudioSource = m_spAudioDevice->AddAudioSource();
+
+	m_blipBuf.sample_rate(44100);
+	m_blipBuf.clock_rate(c_cpuCyclesPerSecond);
+
+	m_nesApu.output(&m_blipBuf);
 
 }
 
@@ -299,14 +252,12 @@ void Apu::AddCycles(uint32_t cpuCycles)
 
 void Apu::PushAudio()
 {
-
-	static const int16_t dutyCycleSequences[4][8] = 
-	{ { SHRT_MIN, SHRT_MAX, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN }, // 01000000
-	{ SHRT_MIN, SHRT_MAX, SHRT_MAX, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN }, // 01100000
-	{ SHRT_MIN, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MIN, SHRT_MIN, SHRT_MIN }, // 01111000
-	{ SHRT_MAX, SHRT_MIN, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MAX }, // 10011111
+	static const int16_t dutyCycleSequences[4][8] = {
+		{ SHRT_MIN, SHRT_MAX, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN }, // 01000000
+		{ SHRT_MIN, SHRT_MAX, SHRT_MAX, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN, SHRT_MIN }, // 01100000
+		{ SHRT_MIN, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MIN, SHRT_MIN, SHRT_MIN }, // 01111000
+		{ SHRT_MAX, SHRT_MIN, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MAX, SHRT_MAX }, // 10011111
 	};
-
 
 	if (m_spAudioData == nullptr)
 	{
@@ -372,6 +323,10 @@ void Apu::PushAudio()
 	m_accumulatedCpuCycles = 0;
 }
 
+uint8_t Apu::ReadStatus()
+{
+	return m_nesApu.read_status(m_accumulatedCpuCycles);
+}
 
 void Apu::WriteMemory8(uint16_t offset, uint8_t value)
 {
@@ -391,7 +346,7 @@ void Apu::WriteMemory8(uint16_t offset, uint8_t value)
 	else if (offset >= 0x4008 && offset < 0x400C)
 	{
 		SetTriangleWaveParameters(offset - 0x4008, value, &m_triangleWaveParameters);
-		GenerateTriangleWaveAudioSourceData(m_triangleWaveParameters, &m_cbTriangleAudioData, &m_spTriangleAudioData, m_spTriangleAudioSource.get());
+		//GenerateTriangleWaveAudioSourceData(m_triangleWaveParameters, &m_cbTriangleAudioData, &m_spTriangleAudioData, m_spTriangleAudioSource.get());
 	}
 }
 
@@ -420,6 +375,12 @@ void Apu::SetTriangleWaveParameters(uint16_t offset, uint8_t value, _Inout_ Tria
 	{
 		pPulseWaveParameters->Bytes3and4.Byte4Value = value;
 	}
+}
+
+
+std::unique_ptr<IApu> CreateApu()
+{
+	return std::make_unique<Apu>();
 }
 
 

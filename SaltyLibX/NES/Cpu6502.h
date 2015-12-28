@@ -17,7 +17,7 @@ namespace NES
 
 	namespace APU
 	{
-		class Apu;
+		class IApu;
 	}
 }
 
@@ -319,7 +319,7 @@ private:
 
 	NES::NES& m_nes;
 	PPU::Ppu& m_ppu;
-	NES::APU::Apu& m_apu;
+	NES::APU::IApu& m_apu;
 	NES::IMapper* m_pMapper;
 
 	// PPU stuff

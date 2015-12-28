@@ -28,6 +28,9 @@
     <Filter Include="Header Files\Util">
       <UniqueIdentifier>{84ecfbd7-4eb1-4e98-8b5d-b6749e459711}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\NES\nes_apu">
+      <UniqueIdentifier>{ea2e563b-e96f-45d8-a87f-28d08f6526df}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -78,6 +81,45 @@
     <ClInclude Include="Util\ComPtr.h">
       <Filter>Header Files\Util</Filter>
     </ClInclude>
+    <ClInclude Include="NES\nes_apu\apu_snapshot.h">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\nes_apu\blargg_common.h">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\nes_apu\blargg_source.h">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\nes_apu\Blip_Buffer.h">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\nes_apu\Blip_Synth.h">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\nes_apu\Multi_Buffer.h">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\nes_apu\Nes_Apu.h">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\nes_apu\Nes_Namco.h">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\nes_apu\Nes_Oscs.h">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\nes_apu\Nes_Vrc6.h">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\nes_apu\Nonlinear_Buffer.h">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClInclude>
+    <ClInclude Include="NES\APU_blargg.h">
+      <Filter>Header Files\NES</Filter>
+    </ClInclude>
+    <ClInclude Include="Util\IAudioDevice.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -124,6 +166,36 @@
     </ClCompile>
     <ClCompile Include="NES\Mappers\mmc5.cpp">
       <Filter>Source Files\NES\Mappers</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\nes_apu\apu_snapshot.cpp">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\nes_apu\Blip_Buffer.cpp">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\nes_apu\Multi_Buffer.cpp">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\nes_apu\Nes_Apu.cpp">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\nes_apu\Nes_Namco.cpp">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\nes_apu\Nes_Oscs.cpp">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\nes_apu\Nes_Vrc6.cpp">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\nes_apu\Nonlinear_Buffer.cpp">
+      <Filter>Source Files\NES\nes_apu</Filter>
+    </ClCompile>
+    <ClCompile Include="NES\APU_blargg.cpp">
+      <Filter>Source Files\NES</Filter>
+    </ClCompile>
+    <ClCompile Include="Util\XAudioDevice.cpp">
+      <Filter>Source Files\Util</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -144,6 +144,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="NES\APU.h" />
+    <ClInclude Include="NES\APU_blargg.h" />
     <ClInclude Include="NES\Controller.h" />
     <ClInclude Include="NES\Cpu6502.h" />
     <ClInclude Include="NES\IMapper.h" />
@@ -151,16 +152,29 @@
     <ClInclude Include="NES\Mappers\BasePpuMemoryMap.h" />
     <ClInclude Include="NES\NES.h" />
     <ClInclude Include="NES\NESRom.h" />
+    <ClInclude Include="NES\nes_apu\apu_snapshot.h" />
+    <ClInclude Include="NES\nes_apu\blargg_common.h" />
+    <ClInclude Include="NES\nes_apu\blargg_source.h" />
+    <ClInclude Include="NES\nes_apu\Blip_Buffer.h" />
+    <ClInclude Include="NES\nes_apu\Blip_Synth.h" />
+    <ClInclude Include="NES\nes_apu\Multi_Buffer.h" />
+    <ClInclude Include="NES\nes_apu\Nes_Apu.h" />
+    <ClInclude Include="NES\nes_apu\Nes_Namco.h" />
+    <ClInclude Include="NES\nes_apu\Nes_Oscs.h" />
+    <ClInclude Include="NES\nes_apu\Nes_Vrc6.h" />
+    <ClInclude Include="NES\nes_apu\Nonlinear_Buffer.h" />
     <ClInclude Include="NES\Ppu.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Util\ComPtr.h" />
     <ClInclude Include="Util\CoreUtils.h" />
+    <ClInclude Include="Util\IAudioDevice.h" />
     <ClInclude Include="Util\MovingAverage.h" />
     <ClInclude Include="Util\Stopwatch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NES\APU.cpp" />
+    <ClCompile Include="NES\APU_blargg.cpp" />
     <ClCompile Include="NES\Controller.cpp" />
     <ClCompile Include="NES\Cpu6502.cpp" />
     <ClCompile Include="NES\Mappers\BasePpuMemoryMap.cpp" />
@@ -171,6 +185,14 @@
     <ClCompile Include="NES\Mappers\UxROM.cpp" />
     <ClCompile Include="NES\NES.cpp" />
     <ClCompile Include="NES\NESRom.cpp" />
+    <ClCompile Include="NES\nes_apu\apu_snapshot.cpp" />
+    <ClCompile Include="NES\nes_apu\Blip_Buffer.cpp" />
+    <ClCompile Include="NES\nes_apu\Multi_Buffer.cpp" />
+    <ClCompile Include="NES\nes_apu\Nes_Apu.cpp" />
+    <ClCompile Include="NES\nes_apu\Nes_Namco.cpp" />
+    <ClCompile Include="NES\nes_apu\Nes_Oscs.cpp" />
+    <ClCompile Include="NES\nes_apu\Nes_Vrc6.cpp" />
+    <ClCompile Include="NES\nes_apu\Nonlinear_Buffer.cpp" />
     <ClCompile Include="NES\Ppu.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -180,6 +202,7 @@
     </ClCompile>
     <ClCompile Include="Util\MovingAverage.cpp" />
     <ClCompile Include="Util\Stopwatch.cpp" />
+    <ClCompile Include="Util\XAudioDevice.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
