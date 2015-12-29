@@ -326,6 +326,8 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 	if (iRow + iPixelRow >= c_displayHeight)
 		return;
 
+	const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + iPixelRow);
+	const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + iPixelRow + 8);
 	for (uint16_t iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
 	{
 		if (iColumn + iPixelColumn < 0)
@@ -334,8 +336,6 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 		if (iColumn + iPixelColumn >= c_displayWidth)
 			break;
 
-		const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + iPixelRow);
-		const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + iPixelRow + 8);
 		const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
 										 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
 	
