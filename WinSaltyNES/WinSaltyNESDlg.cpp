@@ -508,6 +508,23 @@ void CWinSaltyNESDlg::OnBnClickedRunCycles()
 	RunCycles(200000, false /*runInfinitely*/);
 }
 
+void CALLBACK FrameTimerProc(PVOID lpParameter, BOOLEAN /*timerOrWaitFired*/)
+{
+	CWinSaltyNESDlg* pDlg = (CWinSaltyNESDlg*)lpParameter;
+	pDlg->DoFrameTimerProc();
+}
+
+void CWinSaltyNESDlg::DoFrameTimerProc()
+{
+	RenderFrame();
+}
+
+void CWinSaltyNESDlg::StopTimer()
+{
+	m_runMode = NESRunMode::Paused;
+	KillTimer(TIMER_REDRAW);
+	//DeleteTimerQueueTimer(NULL, m_frameTimer, NULL);
+}
 
 void CWinSaltyNESDlg::OnBnClickedRunInfinite()
 {
@@ -516,11 +533,12 @@ void CWinSaltyNESDlg::OnBnClickedRunInfinite()
 		m_runMode = NESRunMode::Continuous;
 		m_frameStopwatch.Start();
 		SetTimer(TIMER_REDRAW, 0, nullptr);
+
+		//CreateTimerQueueTimer(&m_frameTimer, NULL /*default timer queue*/, FrameTimerProc, this, 1000/60, 1000/60, WT_EXECUTEINTIMERTHREAD /*flags*/);
 	}
 	else
 	{
-		m_runMode = NESRunMode::Paused;
-		KillTimer(TIMER_REDRAW);
+		StopTimer();
 	}
 }
 
@@ -558,8 +576,8 @@ void CWinSaltyNESDlg::RenderFrame()
 		{
 			m_debugFileOutput.write(errorString, strlen(errorString));
 		}
-		m_runMode = NESRunMode::Paused;
-		KillTimer(TIMER_REDRAW);
+
+		StopTimer();
 
 		MessageBoxA(m_hWnd, errorString, "Error!", MB_OK);
 
@@ -574,7 +592,9 @@ void CWinSaltyNESDlg::IncrementFrameCount(bool shouldUpdateFpsCounter)
 	Duration frameTime = m_frameStopwatch.Lap();
 	int averageFrameTime = (int)m_fpsAverage.AddValue(frameTime.GetMilliseconds());
 
-	if (shouldUpdateFpsCounter)
+	static int s_counter = 0;
+
+	if (shouldUpdateFpsCounter && s_counter++ % 4 == 0)
 	{
 		if (averageFrameTime == 0)
 			averageFrameTime = 1;
@@ -641,12 +661,12 @@ BOOL CWinSaltyNESDlg::PreTranslateMessage(MSG* pMsg)
 	if (pMsg->message == WM_KEYDOWN || pMsg->message == WM_KEYUP)
 	{
 		// Intercept key presses-
-		//NES::ControllerInput nesInput = MapVirtualKeyToNesInput(pMsg->wParam);
-		//if (nesInput != NES::ControllerInput::_Max)
-		//{
-		//	m_nes.UseController1().SetInputStatus(nesInput, (pMsg->message == WM_KEYDOWN));
-		//	return TRUE;
-		//}
+		NES::ControllerInput nesInput = MapVirtualKeyToNesInput(pMsg->wParam);
+		if (nesInput != NES::ControllerInput::_Max)
+		{
+			m_nes.UseController1().SetInputStatus(nesInput, (pMsg->message == WM_KEYDOWN));
+			return TRUE;
+		}
 	}
 	return FALSE;
 }

@@ -19,10 +19,12 @@ class CWinSaltyNESDlg : public CDialogEx, public IXAudio2VoiceCallback
 public:
 	CWinSaltyNESDlg(CWnd* pParent = NULL);	// standard constructor
 
+	void DoFrameTimerProc();
+
 // Dialog Data
 	enum { IDD = IDD_WINSALTYNES_DIALOG };
 
-	protected:
+protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
 
 
@@ -38,6 +40,8 @@ protected:
     STDMETHOD_(void, OnVoiceError) (THIS_ void* /*pBufferContext*/, HRESULT /*Error*/) override {}
 
 	virtual BOOL PreTranslateMessage(MSG* pMsg);
+
+	void StopTimer();
 
 	static std::wstring PickRomFile();
 	bool OpenRomFile(LPCWSTR pwzRomFile);
@@ -87,6 +91,8 @@ private:
 
 	MovingAverage<LONGLONG, 30> m_fpsAverage;
 	Stopwatch m_frameStopwatch;
+
+	HANDLE m_frameTimer = INVALID_HANDLE_VALUE;
 
 	IXAudio2* m_pXAudio = nullptr;
 	IXAudio2SourceVoice* m_pSourceVoice = nullptr;
