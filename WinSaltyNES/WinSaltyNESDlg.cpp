@@ -12,6 +12,7 @@
 #include "NES/Ppu.h"
 #include "NES/Cpu6502.h"
 #include "Util/Stopwatch.h"
+//#include "Util/ComPtr.h"
 
 #include <Shlobj.h>
 #include <stdexcept>
@@ -112,7 +113,6 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_OPEN_ROM, &CWinSaltyNESDlg::OnBnClickedOpenRom)
-	ON_BN_CLICKED(IDC_RUN_CYCLES, &CWinSaltyNESDlg::OnBnClickedRunCycles)
 	ON_BN_CLICKED(IDC_RUN_INFINITE, &CWinSaltyNESDlg::OnBnClickedRunInfinite)
 	ON_WM_ERASEBKGND()
 	ON_WM_TIMER()
@@ -153,10 +153,8 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	//  when the application's main window is not a dialog
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
-	//OpenRomFile(L"C:\\Games\\Emulation\\NES_Roms\\Donkey Kong Jr. (World) (Rev A).nes");
-	//OpenRomFile(L"C:\\Users\\gelias\\OneDrive\\Documents\\NES_Rom_Backups\\Donkey Kong Jr. (World) (Rev A).nes");
-	OpenRomFile(L"C:\\Users\\gelias\\OneDrive\\Documents\\NES_Rom_Backups\\LegendOfZelda.nes");
-	//OpenRomFile(L"C:\\Users\\gelias\\Source\\Repos\\SaltyNES\\TestRoms\\sprite_hit_tests_2005.10.05\\01.basics.nes");
+	//OpenRomFile(L"C:\\Users\\gelias\\OneDrive\\Documents\\NES_Rom_Backups\\LegendOfZelda.nes");
+	OpenRomFile(L"C:\\Users\\Galen\\OneDrive\\Documents\\NES_Rom_Backups\\LegendOfZelda.nes");
 	SetupRenderBitmap();
 
 	// Set controls initial states
@@ -170,23 +168,23 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 
 std::wstring CWinSaltyNESDlg::PickRomFile()
 {
-	IFileDialog* pFileDialog = nullptr;
-	//IFileDialogEvents* pFileDialogEvents = nullptr;
+	CComPtr<IFileDialog> spFileDialog;
+	CComPtr<IShellItem> spItemResult;
 
-	HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFileDialog));
+	HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&spFileDialog));
 
-	IShellItem* psiResult;
-
-	if (FAILED(hr = pFileDialog->Show(NULL)))
+	if (FAILED(hr))
 		return std::wstring();
 
-	hr = pFileDialog->GetResult(&psiResult);
+	if (FAILED(hr = spFileDialog->Show(NULL)))
+		return std::wstring();
+
+	if (FAILED(hr = spFileDialog->GetResult(&spItemResult)))
+		return std::wstring();
 
 	PWSTR pszFilePath = nullptr;
-	psiResult->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-
+	spItemResult->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
 	std::wstring result = pszFilePath;
-
 	CoTaskMemFree(pszFilePath);
 
 	return result;
@@ -196,6 +194,7 @@ bool CWinSaltyNESDlg::OpenRomFile(LPCWSTR pwzRomFile)
 {
 	CWin32ReadOnlyFile romFile(pwzRomFile);
 
+	m_isRomLoaded = false;
 	if (!romFile.IsValid())
 		return false;
 
@@ -203,6 +202,7 @@ bool CWinSaltyNESDlg::OpenRomFile(LPCWSTR pwzRomFile)
 	{
 		m_nes.LoadRomFile(&romFile);
 		m_nes.Reset();
+		m_isRomLoaded = true;
 	}
 	catch (NES::unsupported_mapper& mapperException)
 	{
@@ -318,12 +318,6 @@ HCURSOR CWinSaltyNESDlg::OnQueryDragIcon()
 
 void CWinSaltyNESDlg::PaintNESFrame(CDC* pDC)
 {
-	//PPU::ppuDisplayBuffer_t screenPixels;
-
-	//m_nes.GetPpu().RenderToBuffer(screenPixels, m_renderOptions);
-	//m_nes.GetPpu().RenderToBuffer(screenPixels, m_renderOptions);
-	//m_nes.GetPpu().RenderToBuffer(m_renderOptions);
-
 	::SetDIBits(pDC->GetSafeHdc(), (HBITMAP)m_nesRenderBitmap.GetSafeHandle(), 0, PPU::c_displayHeight, m_nes.GetPpu().GetDisplayBuffer(), &m_nesRenderBitmapInfo, DIB_RGB_COLORS);
 
 	CDC memDC;
@@ -334,42 +328,10 @@ void CWinSaltyNESDlg::PaintNESFrame(CDC* pDC)
 }
 
 
-void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
+void CWinSaltyNESDlg::UpdateRuntimeStats()
 {
-	Stopwatch stopwatch(true /*start*/);
-
-	int nFrames = 0;
-
-	for (int instructionsRun = 0; instructionsRun < nCycles; )
-	{
-		if (!runInfinitely)
-			instructionsRun++;
-
-		if (m_loggingEnabled)
-		{
-			const char* pszDebugString = m_nes.GetCpu().GetDebugState();
-			m_debugFileOutput.write(pszDebugString, strlen(pszDebugString));
-		}
-
-		m_nes.RunCycle();
-
-		if (m_nes.GetPpu().ShouldRender())
-		{
-			CClientDC clientDC(this);
-			nFrames++;
-			PaintNESFrame(&clientDC);
-		}
-	}
-
-	auto duration = stopwatch.Stop();
-	WCHAR wzFramesStatus[1024];
-	const int durationInMilliseconds = (int)(duration.GetMilliseconds());
-	const int framesPerSecond = (int)(nFrames * 1000 / durationInMilliseconds);
-	swprintf_s(wzFramesStatus, _countof(wzFramesStatus), L"Frames = %d\r\nDuration (msec) = %d\r\nFrames/s = %d\r\n", nFrames, durationInMilliseconds, framesPerSecond);
-
-	SetDlgItemTextW(IDC_STATUSEDIT, wzFramesStatus);
-
-	m_debugFileOutput.flush();
+	if (m_loggingEnabled)
+		m_debugFileOutput.flush();
 
 	auto cyclesString = std::to_wstring(m_nes.GetCyclesRanSoFar());
 	SetDlgItemTextW(IDC_CYCLES_DISPLAY, cyclesString.c_str());
@@ -377,6 +339,7 @@ void CWinSaltyNESDlg::RunCycles(int nCycles, bool runInfinitely)
 	wchar_t wzProgramCounter[32];
 	swprintf_s(wzProgramCounter, _countof(wzProgramCounter),L"%04hX", m_nes.GetCpu().GetProgramCounter());
 	SetDlgItemTextW(IDC_PROGRAM_COUNTER, wzProgramCounter);
+
 }
 
 
@@ -475,9 +438,6 @@ void CWinSaltyNESDlg::PlayRandomAudio(int hz)
 	buffer.pAudioData = soundData;
 	buffer.Flags = XAUDIO2_END_OF_STREAM;
 
-	//XAUDIO2_VOICE_STATE voiceState;
-	//m_pSourceVoice->GetState(&voiceState, 0);
-
 	// Submit the buffer
 	++m_buffersInUse;
 	hr = m_pSourceVoice->SubmitSourceBuffer(&buffer);
@@ -503,11 +463,6 @@ void CWinSaltyNESDlg::OnBnClickedOpenRom()
 }
 
 
-void CWinSaltyNESDlg::OnBnClickedRunCycles()
-{
-	RunCycles(200000, false /*runInfinitely*/);
-}
-
 void CALLBACK FrameTimerProc(PVOID lpParameter, BOOLEAN /*timerOrWaitFired*/)
 {
 	CWinSaltyNESDlg* pDlg = (CWinSaltyNESDlg*)lpParameter;
@@ -521,6 +476,7 @@ void CWinSaltyNESDlg::DoFrameTimerProc()
 
 void CWinSaltyNESDlg::StopTimer()
 {
+	UpdateRuntimeStats();
 	m_runMode = NESRunMode::Paused;
 	KillTimer(TIMER_REDRAW);
 	//DeleteTimerQueueTimer(NULL, m_frameTimer, NULL);
@@ -528,7 +484,7 @@ void CWinSaltyNESDlg::StopTimer()
 
 void CWinSaltyNESDlg::OnBnClickedRunInfinite()
 {
-	if (m_runMode != NESRunMode::Continuous)
+	if (m_runMode != NESRunMode::Continuous && m_isRomLoaded)
 	{
 		m_runMode = NESRunMode::Continuous;
 		m_frameStopwatch.Start();
@@ -600,7 +556,7 @@ void CWinSaltyNESDlg::IncrementFrameCount(bool shouldUpdateFpsCounter)
 			averageFrameTime = 1;
 
 		WCHAR wzAverageFps[128];
-		swprintf_s(wzAverageFps, _countof(wzAverageFps), L"%d fps", 1000 / averageFrameTime);
+		swprintf_s(wzAverageFps, _countof(wzAverageFps), L"%d", 1000 / averageFrameTime);
 		SetDlgItemTextW(IDC_STATUSEDIT, wzAverageFps);
 	}
 }

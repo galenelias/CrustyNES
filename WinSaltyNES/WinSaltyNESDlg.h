@@ -74,9 +74,12 @@ private:
 	void IncrementFrameCount(bool shouldUpdateFpsCounter);
 	void PaintNESFrame(CDC* pDC);
 
+	void UpdateRuntimeStats();
+
 	void PlayRandomAudio(int hz);
 	void PlayRandomAudio();
 
+	bool m_isRomLoaded = false;
 	NES::NES m_nes;
 	enum class NESRunMode
 	{
@@ -100,7 +103,6 @@ private:
 
 public:
 	afx_msg void OnBnClickedOpenRom();
-	afx_msg void OnBnClickedRunCycles();
 	afx_msg void OnBnClickedRunInfinite();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
