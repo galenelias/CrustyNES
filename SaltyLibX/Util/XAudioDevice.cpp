@@ -33,9 +33,6 @@ private:
 class XAudioDevice : public IAudioDevice
 {
 public:
-	XAudioDevice();
-	~XAudioDevice();
-
 	void Initialize();
 
 	virtual std::shared_ptr<IAudioSource> AddAudioSource() override;
@@ -46,16 +43,6 @@ private:
 	IXAudio2MasteringVoice* m_pMasteringVoice = nullptr;
 };
 
-
-XAudioDevice::XAudioDevice()
-{
-
-}
-
-XAudioDevice::~XAudioDevice()
-{
-	CoUninitialize();
-}
 
 void XAudioDevice::Initialize()
 {
@@ -119,31 +106,22 @@ void XAudioSource::Initialize(IXAudio2* pXAudio)
 
 	VerifyHr(pXAudio->CreateSourceVoice(&m_pXAudioSourceVoice, &waveformat));
 
-	SetVolume(1.0f);
-
 }
 void XAudioSource::SetChannelData(const uint8_t* pData, size_t cbData, bool /*shouldLoop*/)
 {
 	XAUDIO2_VOICE_STATE voiceState;
 	m_pXAudioSourceVoice->GetState(&voiceState, 0);
 
+	// Hacky: Avoid pile up if the audio engine is running faster than realtime.
+	//  We will just drop new frames if things are getting jammed up. We should ideally
+	//  drop frames from earlier in the queue if we haven't gotten to them yet, or even
+	//  better assert that our audio playback isn't getting ahead of us
 	if (voiceState.BuffersQueued > 5)
 		return;
 
 	XAUDIO2_BUFFER buffer = { 0 };
 	buffer.AudioBytes = static_cast<uint32_t>(cbData);
 	buffer.pAudioData = reinterpret_cast<const BYTE*>(pData);
-	buffer.PlayBegin = 0;
-	buffer.PlayLength = 0;
-	//buffer.LoopCount = 2; // TODO: Real sample length
-	//buffer.LoopCount = 200; // TODO: Real sample length
-
-	//m_pXAudioSourceVoice->ExitLoop();
-	//m_pXAudioSourceVoice->Stop();
-	//m_pXAudioSourceVoice->FlushSourceBuffers();
-
-	//XAUDIO2_VOICE_STATE state;
-	//m_pXAudioSourceVoice->GetState(&state, 0);
 
 	VerifyHr(m_pXAudioSourceVoice->SubmitSourceBuffer(&buffer));
 }
