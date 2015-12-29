@@ -365,13 +365,13 @@ bool Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 	{
 		for (uint16_t iPixelRow = 0; iPixelRow != 8; ++iPixelRow)
 		{
-			const int iPixelRowOffset = flipVertically ? (totalPixelRows - iPixelRow - iTile * 8) : (iPixelRow + iTile * 8);
+			const int iPixelRowOffset = flipVertically ? (totalPixelRows - iPixelRow - iTile * 8 - 1) : (iPixelRow + iTile * 8);
 			if (iRow + iPixelRowOffset >= c_displayHeight)
 				continue;
 
 			for (uint16_t iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
 			{
-				const int iPixelColumnOffset = flipHorizontally ? (8 - iPixelColumn) : iPixelColumn;
+				const int iPixelColumnOffset = flipHorizontally ? (7 - iPixelColumn) : iPixelColumn;
 				if (iColumn + iPixelColumnOffset >= c_displayWidth)
 					continue;
 
@@ -499,18 +499,16 @@ void Ppu::RenderScanline(int scanline)
 	const int c_rows = 30;
 	const int c_columnsPerRow = 32;
 
-	ppuPixelOutputTypeBuffer_t pixelOutputTypeBuffer;
-	memset(pixelOutputTypeBuffer, 0, sizeof(pixelOutputTypeBuffer));
+	for (uint32_t iRow = scanline; iRow < scanline + 8; ++iRow)
+	{
+		for (uint32_t iColumn = 0; iColumn != c_displayWidth; ++iColumn)
+		{
+			m_screenPixelTypes[iRow][iColumn] = PixelOutputType::None;
+		}
+	}
 
 	const int iRowPixelOffset = -(m_verticalScrollOffset % c_tileSize);
 	const int iColPixelOffset = -(m_horizontalScrollOffset % c_tileSize);
-
-	static int s_staticStuff = 0;
-	if (scanline == 128 && s_staticStuff++ % 4 == 0)
-	{
-		int i = 3;
-		i++;
-	}
 
 	if (m_ppuMaskFlags.showBackground)
 	{
@@ -518,15 +516,15 @@ void Ppu::RenderScanline(int scanline)
 		for (int iRow = 0; iRow != c_rows + 1; ++iRow)
 		{
 			const uint16_t iRowTile = (iRow + (m_verticalScrollOffset / c_tileSize)) % c_rows;
-			const bool rowOverflow = (iRow + (m_verticalScrollOffset / c_tileSize)) > c_rows;
+			const bool rowOverflow = (iRow + (m_verticalScrollOffset / c_tileSize)) >= c_rows;
 
-			if (iRowTile != scanline/8)
+			if (iRow != scanline/8)
 				continue;
 
 			for (int iColumn = 0; iColumn != c_columnsPerRow + 1; ++iColumn)
 			{
 				const uint16_t iColumnTile = (iColumn + (m_horizontalScrollOffset / c_tileSize)) % c_columnsPerRow;
-				const bool columnOverflow = (iColumn + (m_horizontalScrollOffset / c_tileSize)) > c_columnsPerRow;
+				const bool columnOverflow = (iColumn + (m_horizontalScrollOffset / c_tileSize)) >= c_columnsPerRow;
 				const uint16_t xNametable = nameTableOffset + (columnOverflow ? 0x400 : 0) + (rowOverflow ? 0x800 : 0) & 0x2FFF;
 
 				const uint8_t tileNumber = ReadMemory8(xNametable + iRowTile * c_columnsPerRow + iColumnTile);
@@ -534,7 +532,7 @@ void Ppu::RenderScanline(int scanline)
 				const uint8_t attributeData = ReadMemory8(xNametable + (c_rows * c_columnsPerRow) + attributeIndex);
 				const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRowTile, iColumnTile);
 
-				DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8 + iRowPixelOffset, iColumn * 8 + iColPixelOffset, patternTableOffset, m_screenPixels, pixelOutputTypeBuffer);
+				DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8 + iRowPixelOffset, iColumn * 8 + iColPixelOffset, patternTableOffset, m_screenPixels, m_screenPixelTypes);
 
 				if (m_renderOptions.fDrawBackgroundGrid)
 					DrawRectangle(m_screenPixels, c_nesColorGray, iColumn*8 + iColPixelOffset, (iColumn+1)*8 + iColPixelOffset,  iRow*8 + iRowPixelOffset, (iRow+1)*8 + iRowPixelOffset);
@@ -553,7 +551,7 @@ void Ppu::RenderScanline(int scanline)
 				continue;
 
 			const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
-			if (spriteY > scanline || spriteY + totalPixelRows <= scanline )
+			if (spriteY >= scanline + 8 || spriteY + totalPixelRows <= scanline)
 				continue;
 
 			uint8_t spriteX = m_sprRam[spriteByteOffset + 3];
@@ -565,7 +563,7 @@ void Ppu::RenderScanline(int scanline)
 			const bool flipHorizontally = (thirdByte & 0x40) != 0;
 			const bool flipVertically = (thirdByte & 0x80) != 0;
 
-			const bool spriteHit = DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, m_screenPixels, pixelOutputTypeBuffer);
+			const bool spriteHit = DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, m_screenPixels, m_screenPixelTypes);
 
 			if (iSprite == 0 && spriteHit)
 			{

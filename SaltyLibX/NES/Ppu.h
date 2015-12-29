@@ -187,7 +187,8 @@ private:
 
 	bool m_shouldRender = false;
 	RenderOptions m_renderOptions;
-	PPU::ppuDisplayBuffer_t m_screenPixels;
+	ppuDisplayBuffer_t m_screenPixels;
+	ppuPixelOutputTypeBuffer_t m_screenPixelTypes;
 
 	CPU::Cpu6502& m_cpu;
 	NES::IMapper* m_pMapper;
