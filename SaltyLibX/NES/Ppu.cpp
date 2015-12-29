@@ -312,31 +312,45 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 		if (iRow + iPixelRow >= c_displayHeight)
 			break;
 
-		for (uint16_t iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
-		{
-			if (iColumn + iPixelColumn < 0)
-				continue;
-
-			if (iColumn + iPixelColumn >= c_displayWidth)
-				break;
-
-			const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + iPixelRow);
-			const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + iPixelRow + 8);
-			const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
-											 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
-		
-			// All background colors should map to 3F00
-			const uint8_t fullPixelBytes = (lowOrderColorBytes == 0) ? 0 : (lowOrderColorBytes | highOrderPixelData);
-
-			const uint8_t colorDataOffset = ReadMemory8(c_paletteBkgOffset + fullPixelBytes);
-
-			displayBuffer[iRow + iPixelRow][iColumn + iPixelColumn] = c_nesRgbColorTable[colorDataOffset];
-			
-			if (lowOrderColorBytes != 0)
-				outputTypeBuffer[iRow + iPixelRow][iColumn + iPixelColumn] = PixelOutputType::Background;
-		}
+		DrawBkgTile(tileNumber, highOrderPixelData, iRow, iColumn, iPixelRow, patternTableOffset, displayBuffer, outputTypeBuffer);
 	}
 }
+
+void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, int iPixelRow, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
+{
+	const uint16_t tileOffsetBase = patternTableOffset + (tileNumber << 4);
+
+	if (iRow + iPixelRow < 0)
+		return;
+
+	if (iRow + iPixelRow >= c_displayHeight)
+		return;
+
+	for (uint16_t iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
+	{
+		if (iColumn + iPixelColumn < 0)
+			continue;
+
+		if (iColumn + iPixelColumn >= c_displayWidth)
+			break;
+
+		const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + iPixelRow);
+		const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + iPixelRow + 8);
+		const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
+										 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
+	
+		// All background colors should map to 3F00
+		const uint8_t fullPixelBytes = (lowOrderColorBytes == 0) ? 0 : (lowOrderColorBytes | highOrderPixelData);
+
+		const uint8_t colorDataOffset = ReadMemory8(c_paletteBkgOffset + fullPixelBytes);
+
+		displayBuffer[iRow + iPixelRow][iColumn + iPixelColumn] = c_nesRgbColorTable[colorDataOffset];
+		
+		if (lowOrderColorBytes != 0)
+			outputTypeBuffer[iRow + iPixelRow][iColumn + iPixelColumn] = PixelOutputType::Background;
+	}
+}
+
 
 
 // Handle the pattern table access logic differences between 8x8 sprites and 8x16 sprites
@@ -353,6 +367,53 @@ uint16_t Ppu::GetSpriteTileOffset(uint8_t tileNumber, bool is8x8Sprite) const
 	}
 }
 
+
+bool Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, int iPixelRow, bool foregroundSprite, bool flipHorizontally, bool flipVertically, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
+{
+	const uint16_t tileOffsetBase = GetSpriteTileOffset(tileNumber, m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x8);
+	const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
+
+	const uint16_t totalTiles = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 2 : 1;
+	uint16_t iTile = iPixelRow / 8;
+	uint16_t iTileRow = iPixelRow % 8;
+
+	const int iPixelRowOffset = flipVertically ? (totalPixelRows - iPixelRow - 1) : (iPixelRow);
+	if (iRow + iPixelRowOffset >= c_displayHeight)
+		return false;
+
+	bool spriteHit = false;
+	for (uint16_t iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
+	{
+		const int iPixelColumnOffset = flipHorizontally ? (7 - iPixelColumn) : iPixelColumn;
+		if (iColumn + iPixelColumnOffset >= c_displayWidth)
+			continue;
+
+		const uint16_t c_bytesPerTile = 16;
+		const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iTileRow);
+		const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iTileRow + 8);
+		const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7 - iPixelColumn))) >> (7 - iPixelColumn))
+			+ ((colorByte2 & (1 << (7 - iPixelColumn))) >> (7 - iPixelColumn) << 1);
+
+		const uint8_t fullPixelBytes = lowOrderColorBytes | highOrderPixelData;
+		const uint8_t colorDataOffset = ReadMemory8(c_paletteSprOffset + fullPixelBytes);
+
+		// TODO: Need to emulate the sprite priority 'bug':  http://wiki.nesdev.com/w/index.php/PPU_sprite_priority
+		if (lowOrderColorBytes != 0 && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))
+		{
+			spriteHit = true;
+		}
+
+		if (lowOrderColorBytes != 0
+			&& ((outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::None)
+				|| (foregroundSprite && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))))
+		{
+			displayBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = c_nesRgbColorTable[colorDataOffset];
+			outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = PixelOutputType::Sprite;
+		}
+	}
+
+	return spriteHit;
+}
 
 bool Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool foregroundSprite, bool flipHorizontally, bool flipVertically, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
 {
@@ -490,21 +551,15 @@ void Ppu::RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& 
 
 void Ppu::RenderScanline(int scanline)
 {
-	if (scanline % 8 != 0)
-		return;
-
 	const uint16_t nameTableOffset = GetBaseNametableOffset();
 	const uint16_t patternTableOffset = GetPatternTableOffset();
 
 	const int c_rows = 30;
 	const int c_columnsPerRow = 32;
 
-	for (uint32_t iRow = scanline; iRow < scanline + 8; ++iRow)
+	for (uint32_t iColumn = 0; iColumn != c_displayWidth; ++iColumn)
 	{
-		for (uint32_t iColumn = 0; iColumn != c_displayWidth; ++iColumn)
-		{
-			m_screenPixelTypes[iRow][iColumn] = PixelOutputType::None;
-		}
+		m_screenPixelTypes[scanline][iColumn] = PixelOutputType::None;
 	}
 
 	const int iRowPixelOffset = -(m_verticalScrollOffset % c_tileSize);
@@ -512,31 +567,26 @@ void Ppu::RenderScanline(int scanline)
 
 	if (m_ppuMaskFlags.showBackground)
 	{
-		// Render background tiles
-		for (int iRow = 0; iRow != c_rows + 1; ++iRow)
+		const uint16_t iRowTile = ((scanline + m_verticalScrollOffset) / c_tileSize) % c_rows;
+		const bool rowOverflow = ((scanline + m_verticalScrollOffset) / c_tileSize) >= c_rows;
+
+		for (int iColumn = 0; iColumn != c_columnsPerRow + 1; ++iColumn)
 		{
-			const uint16_t iRowTile = (iRow + (m_verticalScrollOffset / c_tileSize)) % c_rows;
-			const bool rowOverflow = (iRow + (m_verticalScrollOffset / c_tileSize)) >= c_rows;
+			const uint16_t iColumnTile = (iColumn + (m_horizontalScrollOffset / c_tileSize)) % c_columnsPerRow;
+			const bool columnOverflow = (iColumn + (m_horizontalScrollOffset / c_tileSize)) >= c_columnsPerRow;
+			const uint16_t xNametable = nameTableOffset + (columnOverflow ? 0x400 : 0) + (rowOverflow ? 0x800 : 0) & 0x2FFF;
 
-			if (iRow != scanline/8)
-				continue;
+			const uint8_t tileNumber = ReadMemory8(xNametable + iRowTile * c_columnsPerRow + iColumnTile);
+			const uint8_t attributeIndex = static_cast<uint8_t>((iRowTile / 4) * 8 + (iColumnTile / 4));
+			const uint8_t attributeData = ReadMemory8(xNametable + (c_rows * c_columnsPerRow) + attributeIndex);
+			const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRowTile, iColumnTile);
 
-			for (int iColumn = 0; iColumn != c_columnsPerRow + 1; ++iColumn)
-			{
-				const uint16_t iColumnTile = (iColumn + (m_horizontalScrollOffset / c_tileSize)) % c_columnsPerRow;
-				const bool columnOverflow = (iColumn + (m_horizontalScrollOffset / c_tileSize)) >= c_columnsPerRow;
-				const uint16_t xNametable = nameTableOffset + (columnOverflow ? 0x400 : 0) + (rowOverflow ? 0x800 : 0) & 0x2FFF;
+			const int pixelRow = (scanline + m_verticalScrollOffset) % 8;
 
-				const uint8_t tileNumber = ReadMemory8(xNametable + iRowTile * c_columnsPerRow + iColumnTile);
-				const uint8_t attributeIndex = static_cast<uint8_t>((iRowTile / 4) * 8 + (iColumnTile / 4));
-				const uint8_t attributeData = ReadMemory8(xNametable + (c_rows * c_columnsPerRow) + attributeIndex);
-				const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRowTile, iColumnTile);
+			DrawBkgTile(tileNumber, highOrderColorBits, scanline - pixelRow, iColumn * 8 + iColPixelOffset, pixelRow, patternTableOffset, m_screenPixels, m_screenPixelTypes);
 
-				DrawBkgTile(tileNumber, highOrderColorBits, iRow * 8 + iRowPixelOffset, iColumn * 8 + iColPixelOffset, patternTableOffset, m_screenPixels, m_screenPixelTypes);
-
-				if (m_renderOptions.fDrawBackgroundGrid)
-					DrawRectangle(m_screenPixels, c_nesColorGray, iColumn*8 + iColPixelOffset, (iColumn+1)*8 + iColPixelOffset,  iRow*8 + iRowPixelOffset, (iRow+1)*8 + iRowPixelOffset);
-			}
+			//if (m_renderOptions.fDrawBackgroundGrid)
+			//	DrawRectangle(m_screenPixels, c_nesColorGray, iColumn*8 + iColPixelOffset, (iColumn+1)*8 + iColPixelOffset,  iRow*8 + iRowPixelOffset, (iRow+1)*8 + iRowPixelOffset);
 		}
 	}
 
@@ -551,7 +601,7 @@ void Ppu::RenderScanline(int scanline)
 				continue;
 
 			const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
-			if (spriteY >= scanline + 8 || spriteY + totalPixelRows <= scanline)
+			if (spriteY > scanline || spriteY + totalPixelRows <= scanline)
 				continue;
 
 			uint8_t spriteX = m_sprRam[spriteByteOffset + 3];
@@ -563,7 +613,7 @@ void Ppu::RenderScanline(int scanline)
 			const bool flipHorizontally = (thirdByte & 0x40) != 0;
 			const bool flipVertically = (thirdByte & 0x80) != 0;
 
-			const bool spriteHit = DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, isForegroundSprite, flipHorizontally, flipVertically, m_screenPixels, m_screenPixelTypes);
+			const bool spriteHit = DrawSprTile(tileNumber, highOrderColorBits, spriteY, spriteX, scanline - spriteY, isForegroundSprite, flipHorizontally, flipVertically, m_screenPixels, m_screenPixelTypes);
 
 			if (iSprite == 0 && spriteHit)
 			{
