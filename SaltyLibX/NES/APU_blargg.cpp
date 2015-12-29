@@ -38,7 +38,7 @@ private:
 	uint32_t m_cbAudioData = 0;
 	uint32_t m_audioWriteOffset = 0;
 
-	std::shared_ptr<IAudioSource> m_spPulse1AudioSource;
+	std::shared_ptr<IAudioSource> m_spAudioSource;
 
 	Blip_Buffer m_blipBuf;
 	Nes_Apu m_nesApu;
@@ -49,13 +49,17 @@ Apu::Apu()
 {
 	m_spAudioDevice = CreateXAudioDevice();
 
-	m_spPulse1AudioSource = m_spAudioDevice->AddAudioSource();
+	m_spAudioSource = m_spAudioDevice->AddAudioSource();
 
 	m_blipBuf.sample_rate(44100);
 	m_blipBuf.clock_rate(c_cpuCyclesPerSecond);
 
 	m_nesApu.output(&m_blipBuf);
-
+	m_nesApu.dmc_reader( [](void*, cpu_addr_t addr)->int
+	{
+		// TODO: Hook up to real CPU reads so DMC sound works correctly
+		return 0;
+	});
 }
 
 void Apu::EnableSound(bool isEnabled)
@@ -75,7 +79,8 @@ void Apu::PushAudio()
 
 	if (m_spAudioData == nullptr)
 	{
-		m_cbAudioData = m_spPulse1AudioSource->GetSamplesPerSecond() * m_spPulse1AudioSource->GetBytesPerSample();
+		// Allocate a full second worth of audio data for now
+		m_cbAudioData = m_spAudioSource->GetSamplesPerSecond() * m_spAudioSource->GetBytesPerSample();
 		m_spAudioData =	std::make_unique<uint8_t[]>(m_cbAudioData);
 		m_audioWriteOffset = 0;
 	}
@@ -84,7 +89,10 @@ void Apu::PushAudio()
 	{
 		auto samplesAvail = m_blipBuf.samples_avail();
 
-		uint32_t cbBufferData = samplesAvail * m_spPulse1AudioSource->GetBytesPerSample();
+		uint32_t cbBufferData = samplesAvail * m_spAudioSource->GetBytesPerSample();
+
+		// If there isn't enough room in our buffer, circle back around to the front
+		//  and kind of just hope we're not blowing away data which is still being played
 		if (m_audioWriteOffset + cbBufferData >= m_cbAudioData)
 			m_audioWriteOffset = 0;
 
@@ -93,8 +101,8 @@ void Apu::PushAudio()
 		memset(pBufferData, 0, cbBufferData);
 
 		size_t count = m_blipBuf.read_samples((blip_sample_t*)pBufferData, samplesAvail);
-		m_spPulse1AudioSource->SetChannelData(pBufferData, cbBufferData, false /*shouldLoop*/);
-		m_spPulse1AudioSource->Play();
+		m_spAudioSource->SetChannelData(pBufferData, cbBufferData, false /*shouldLoop*/);
+		m_spAudioSource->Play();
 	}
 	m_accumulatedCpuCycles = 0;
 }
