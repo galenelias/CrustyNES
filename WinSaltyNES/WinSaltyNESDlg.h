@@ -110,4 +110,6 @@ public:
 	afx_msg void OnBnClickedDebugRendering();
 	afx_msg void OnBnClickedEnablesound();
 	afx_msg void OnBnClickedStopMusic();
+
+	afx_msg LRESULT RenderNextFrame(WPARAM wParam, LPARAM lParam);
 };

@@ -23,6 +23,7 @@
 #define new DEBUG_NEW
 #endif
 
+#define WM_RENDERFRAME (WM_APP + 1)
 
 const DWORD TIMER_REDRAW = 0;
 const DWORD TIMER_SOUNDREFRESH = 1;
@@ -120,6 +121,7 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_DEBUG_RENDERING, &CWinSaltyNESDlg::OnBnClickedDebugRendering)
 	ON_BN_CLICKED(IDC_ENABLESOUND, &CWinSaltyNESDlg::OnBnClickedEnablesound)
 	ON_BN_CLICKED(IDC_STOP_MUSIC, &CWinSaltyNESDlg::OnBnClickedStopMusic)
+	ON_MESSAGE(WM_RENDERFRAME, RenderNextFrame)
 END_MESSAGE_MAP()
 
 
@@ -489,8 +491,9 @@ void CWinSaltyNESDlg::OnBnClickedRunInfinite()
 		m_runMode = NESRunMode::Continuous;
 		m_frameStopwatch.Start();
 		SetTimer(TIMER_REDRAW, 0, nullptr);
-
 		//CreateTimerQueueTimer(&m_frameTimer, NULL /*default timer queue*/, FrameTimerProc, this, 1000/60, 1000/60, WT_EXECUTEINTIMERTHREAD /*flags*/);
+
+		//RenderNextFrame(0,0); // Run as fast as humanly possible for performance measurement reasons
 	}
 	else
 	{
@@ -672,4 +675,31 @@ void CWinSaltyNESDlg::OnBnClickedEnablesound()
 {
 	bool isSoundEnabled = IsDlgButtonChecked(IDC_ENABLESOUND) != 0;
 	m_nes.GetApu().EnableSound(isSoundEnabled);
+}
+
+// https://social.msdn.microsoft.com/Forums/en-US/2a2a4106-5b00-4763-b08c-99f7a45ba552/forcing-message-processing?forum=vcmfcatl
+void GiveTime()
+{
+	// Idle until the screen redraws itself, et. al.
+	MSG msg;
+	while (::PeekMessage( &msg, NULL, 0, 0, PM_NOREMOVE ) ) { 
+		if (!AfxGetThread()->PumpMessage( )) { 
+			::PostQuitMessage(0); 
+			break; 
+		} 
+	} 
+	// let MFC do its idle processing
+	LONG lIdle = 0;
+	while (AfxGetApp()->OnIdle(lIdle++ ))
+		;
+}
+
+
+afx_msg LRESULT CWinSaltyNESDlg::RenderNextFrame(WPARAM /*wParam*/, LPARAM /*lParam*/)
+{
+	RenderFrame();
+	GiveTime();	
+	PostMessage(WM_RENDERFRAME);
+
+	return 0;
 }
