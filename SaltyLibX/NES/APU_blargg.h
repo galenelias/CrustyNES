@@ -1,10 +1,7 @@
 #pragma once
 
-#include <stdint.h>
-#include <memory>
-
 #include "APU.h"
-#include "nes_apu/nes_apu.h"
+#include <memory>
 
 namespace NES { namespace APU { namespace blargg {
 

@@ -2,13 +2,8 @@
 
 #include "APU_blargg.h"
 
-#include "Objbase.h"
 #include <stdexcept>
 
-#include <xaudio2.h>
-#include <algorithm>
-
-#include "../Util/ComPtr.h"
 #include "../Util/IAudioDevice.h"
 #include "APU.h"
 
@@ -31,7 +26,6 @@ public:
 private:
 	std::shared_ptr<IAudioDevice> m_spAudioDevice;
 
-	bool m_isSoundEnabled = true;
 	uint32_t m_accumulatedCpuCycles = 0;
 
 	std::unique_ptr<uint8_t[]> m_spAudioData;
@@ -48,13 +42,13 @@ private:
 Apu::Apu()
 {
 	m_spAudioDevice = CreateXAudioDevice();
-
 	m_spAudioSource = m_spAudioDevice->AddAudioSource();
 
 	m_blipBuf.sample_rate(44100);
 	m_blipBuf.clock_rate(c_cpuCyclesPerSecond);
 
 	m_nesApu.output(&m_blipBuf);
+
 	m_nesApu.dmc_reader( [](void*, cpu_addr_t addr)->int
 	{
 		// TODO: Hook up to real CPU reads so DMC sound works correctly
@@ -64,7 +58,10 @@ Apu::Apu()
 
 void Apu::EnableSound(bool isEnabled)
 {
-	m_isSoundEnabled = isEnabled;
+	if (isEnabled)
+		m_nesApu.output(&m_blipBuf);
+	else
+		m_nesApu.output(nullptr);
 }
 
 void Apu::AddCycles(uint32_t cpuCycles)
@@ -114,9 +111,6 @@ uint8_t Apu::ReadStatus()
 
 void Apu::WriteMemory8(uint16_t offset, uint8_t value)
 {
-	if (!m_isSoundEnabled)
-		return;
-
 	if (offset >= m_nesApu.start_addr && offset <= m_nesApu.end_addr)
 		m_nesApu.write_register(m_accumulatedCpuCycles, offset, value);
 }

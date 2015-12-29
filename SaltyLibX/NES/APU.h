@@ -12,6 +12,7 @@ const int c_cpuFrequency = 1789773; // Hz (cycles/second), i.e. 1.789773 MHz
 class IApu
 {
 public:
+	virtual ~IApu() {};
 	virtual void AddCycles(uint32_t cpuCycles) = 0;
 	virtual void WriteMemory8(uint16_t offset, uint8_t value) = 0;
 	virtual uint8_t ReadStatus() = 0;
