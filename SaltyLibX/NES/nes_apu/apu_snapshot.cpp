@@ -18,7 +18,10 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 
 #include BLARGG_SOURCE_BEGIN
 
-template<int mode>
+#pragma warning(push)
+#pragma warning(disable: 4800) // byte <--> bool conversion (performance warning)
+
+template<bool mode>
 struct apu_reflection
 {
 	#define REFLECT( apu, state ) (mode ? void (apu = state) : void (state = apu))
@@ -85,7 +88,7 @@ void Nes_Apu::save_snapshot( apu_snapshot_t* state ) const
 	state->step     = frame;
 	state->irq_flag = irq_flag;
 	
-	typedef apu_reflection<1> refl;
+	typedef apu_reflection<true> refl;
 	Nes_Apu& apu = *(Nes_Apu*) this; // const_cast
 	refl::reflect_square  ( state->square1,     apu.square1 );
 	refl::reflect_square  ( state->square2,     apu.square2 );
@@ -112,7 +115,7 @@ void Nes_Apu::load_snapshot( apu_snapshot_t const& state )
 	frame       = state.step;
 	irq_flag    = state.irq_flag;
 	
-	typedef apu_reflection<0> refl;
+	typedef apu_reflection<false> refl;
 	apu_snapshot_t& st = (apu_snapshot_t&) state; // const_cast
 	refl::reflect_square  ( st.square1,     square1 );
 	refl::reflect_square  ( st.square2,     square2 );
@@ -123,3 +126,4 @@ void Nes_Apu::load_snapshot( apu_snapshot_t const& state )
 	dmc.last_amp = dmc.dac;
 }
 
+#pragma warning(pop)
