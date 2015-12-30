@@ -69,13 +69,14 @@ typedef PixelOutputType ppuPixelOutputTypeBuffer_t[c_displayHeight][c_displayWid
 class Ppu
 {
 public:
-	Ppu(CPU::Cpu6502& cpu);
+	Ppu() = default;
 
 	Ppu(const Ppu&) = delete;
 	Ppu& operator=(const Ppu&) = delete;
 
 	void SetRomMapper(NES::IMapper* pMapper);
 	void SetRenderOptions(const RenderOptions& renderOptions);
+	void SetCpu(CPU::Cpu6502* pCpu);
 
 	bool InVBlank() const { return false; }
 
@@ -192,7 +193,7 @@ private:
 	ppuDisplayBuffer_t m_screenPixels;
 	ppuPixelOutputTypeBuffer_t m_screenPixelTypes;
 
-	CPU::Cpu6502& m_cpu;
+	CPU::Cpu6502* m_pCpu;
 	NES::IMapper* m_pMapper;
 };
 

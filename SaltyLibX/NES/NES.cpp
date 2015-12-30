@@ -10,24 +10,21 @@ NES::NES()
 	//: m_spApu(APU::CreateApu())
 	: m_spApu(APU::blargg::CreateBlarggApu())
 	, m_cpu(*this)
-	, m_ppu(m_cpu)
 {
-	
+	m_ppu.SetCpu(&m_cpu);
+	m_spApu->SetCpu(&m_cpu);
 }
 
 void NES::RunCycle()
 {
-	m_instructionsRan++;
-
 	const uint32_t cpuCycles = GetCpu().RunNextInstruction();
 	GetPpu().AddCycles(cpuCycles);
-	GetApu().AddCycles(cpuCycles);
 }
 
-
-int NES::GetCyclesRanSoFar() const
+void NES::RunCycles(int numCycles)
 {
-	return m_instructionsRan;
+	const uint32_t cpuCycles = GetCpu().RunInstructions(numCycles);
+	GetPpu().AddCycles(cpuCycles);
 }
 
 void NES::LoadRomFile(IReadableFile* pRomFile)
@@ -43,7 +40,6 @@ void NES::LoadRomFile(IReadableFile* pRomFile)
 
 void NES::Reset()
 {
-	m_instructionsRan = 0;
 	m_cpu.Reset();
 	//m_ppu.Reset() // ?
 }

@@ -62,6 +62,9 @@ uint8_t Cpu6502::ReadMemory8(uint16_t offset) const
 	}
 	else if (offset >= 0x2000 && offset < 0x4000)
 	{
+		// 0x2008-0x3FFF are all a mirror of 0x2000-0x2007
+		//offset &= 0x2007;
+
 		// PPU I/O registeres
 		uint16_t mappedOffset = MapIoRegisterMemoryOffset(offset);
 		if (mappedOffset == 0x2002)
@@ -237,6 +240,9 @@ void Cpu6502::Reset()
 	// REVIEW: Push something on to stack?  Initial stack pointer should be FD
 	
 	m_status = static_cast<uint8_t>(CpuStatusFlag::Bit5 | CpuStatusFlag::InterruptDisabled); // Bit 5 doesn't exist, so pin it in the '1' state.  Not sure why interrupts start disabled
+
+	m_totalCycles = 0;
+	m_cyclesRemaining = 0;
 
 	// Override to allow for execution of code segment of nestest
 	//m_pc = 0xc000;
@@ -1244,8 +1250,39 @@ void Cpu6502::Instruction_TransferYtoA(AddressingMode /*addressingMode*/)
 
 void Cpu6502::AddCycles(uint32_t cycles)
 {
-	m_cycles += cycles;
+	m_currentInstructionCycleCount += cycles;
 }
+
+
+int64_t Cpu6502::GetElapsedCycles() const
+{
+	return m_totalCycles - m_cyclesRemaining;
+}
+
+
+uint32_t Cpu6502::RunInstructions(int targetCycles)
+{
+	m_cyclesRemaining += targetCycles;
+	m_totalCycles += targetCycles;
+	uint32_t totalRunCycles = 0;
+
+	while (m_cyclesRemaining > 0)
+	{
+		m_pMapper->SetTick(m_totalCycles - m_cyclesRemaining);
+
+		uint8_t instruction = ReadMemory8(m_pc++);
+
+		auto opCodeEntry = DoOpcodeStuff(instruction);
+		m_currentInstructionCycleCount = opCodeEntry->baseCycles;
+		((*this).*(opCodeEntry->func))(opCodeEntry->addrMode);
+
+		m_cyclesRemaining -= m_currentInstructionCycleCount;
+		totalRunCycles += m_currentInstructionCycleCount;
+	}
+
+	return totalRunCycles;
+}
+
 
 uint32_t Cpu6502::RunNextInstruction()
 {
@@ -1255,12 +1292,12 @@ uint32_t Cpu6502::RunNextInstruction()
 	uint8_t instruction = ReadMemory8(m_pc++);
 
 	auto opCodeEntry = DoOpcodeStuff(instruction);
-	m_cycles = opCodeEntry->baseCycles;
+	m_currentInstructionCycleCount = opCodeEntry->baseCycles;
 	((*this).*(opCodeEntry->func))(opCodeEntry->addrMode);
 
-	m_totalCycles += m_cycles;
+	m_totalCycles += m_currentInstructionCycleCount;
 
-	return m_cycles;
+	return m_currentInstructionCycleCount;
 }
 
 

@@ -63,9 +63,10 @@ static void DrawRectangle(ppuDisplayBuffer_t displayBuffer, DWORD nesColor, int 
 	}
 }
 
-Ppu::Ppu(CPU::Cpu6502& cpu)
-	: m_cpu(cpu)
+
+void Ppu::SetCpu(CPU::Cpu6502* pCpu)
 {
+	m_pCpu = pCpu;
 }
 
 
@@ -232,7 +233,7 @@ void Ppu::AddCycles(uint32_t cpuCycles)
 			m_ppuStatusFlags.InVBlank = true;
 			if (m_ppuCtrlFlags.nmiFlag == 1)
 			{
-				m_cpu.GenerateNonMaskableInterrupt();
+				m_pCpu->GenerateNonMaskableInterrupt();
 			}
 		}
 		else if (m_scanline > c_maxScanline)
@@ -381,6 +382,10 @@ bool Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 	if (iRow + iPixelRowOffset >= c_displayHeight)
 		return false;
 
+	const uint16_t c_bytesPerTile = 16;
+	const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iTileRow);
+	const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iTileRow + 8);
+
 	bool spriteHit = false;
 	for (uint16_t iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
 	{
@@ -388,9 +393,6 @@ bool Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 		if (iColumn + iPixelColumnOffset >= c_displayWidth)
 			continue;
 
-		const uint16_t c_bytesPerTile = 16;
-		const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iTileRow);
-		const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iTileRow + 8);
 		const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7 - iPixelColumn))) >> (7 - iPixelColumn))
 			+ ((colorByte2 & (1 << (7 - iPixelColumn))) >> (7 - iPixelColumn) << 1);
 
@@ -430,15 +432,16 @@ bool Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 			if (iRow + iPixelRowOffset >= c_displayHeight)
 				continue;
 
+			const uint16_t c_bytesPerTile = 16;
+			const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iPixelRow);
+			const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iPixelRow + 8);
+
 			for (uint16_t iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
 			{
 				const int iPixelColumnOffset = flipHorizontally ? (7 - iPixelColumn) : iPixelColumn;
 				if (iColumn + iPixelColumnOffset >= c_displayWidth)
 					continue;
 
-				const uint16_t c_bytesPerTile = 16;
-				const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iPixelRow);
-				const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iPixelRow + 8);
 				const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn))
 												 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
 			

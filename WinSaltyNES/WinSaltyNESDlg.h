@@ -41,26 +41,8 @@ protected:
 
 	virtual BOOL PreTranslateMessage(MSG* pMsg);
 
-	void StopTimer();
-
-	static std::wstring PickRomFile();
-	bool OpenRomFile(LPCWSTR pwzRomFile);
-	void StartLogging();
-
-	void RunCycles(int nCycles, bool runInfinitely);
-
 	HICON m_hIcon;
-
 	CFont m_logBoxFont;
-
-	CBitmap m_nesRenderBitmap;
-	BITMAPINFO m_nesRenderBitmapInfo;
-
-	bool m_loggingEnabled = false;
-	std::ofstream m_debugFileOutput;
-
-	void SetupRenderBitmap();
-
 
 	// Generated message map functions
 	virtual BOOL OnInitDialog();
@@ -71,13 +53,23 @@ protected:
 
 private:
 	void RenderFrame();
+	void StopTimer();
 	void IncrementFrameCount(bool shouldUpdateFpsCounter);
+
 	void PaintNESFrame(CDC* pDC);
+	void SetupRenderBitmap();
 
 	void UpdateRuntimeStats();
 
+	static std::wstring PickRomFile();
+	bool OpenRomFile(LPCWSTR pwzRomFile);
+	void StartLogging();
+
 	void PlayRandomAudio(int hz);
 	void PlayRandomAudio();
+
+	bool m_loggingEnabled = false;
+	std::ofstream m_debugFileOutput;
 
 	bool m_isRomLoaded = false;
 	NES::NES m_nes;
@@ -91,12 +83,14 @@ private:
 	NESRunMode m_runMode = NESRunMode::Paused;
 
 	PPU::RenderOptions m_renderOptions;
+	CBitmap m_nesRenderBitmap;
+	BITMAPINFO m_nesRenderBitmapInfo;
 
 	MovingAverage<LONGLONG, 30> m_fpsAverage;
 	Stopwatch m_frameStopwatch;
-
 	HANDLE m_frameTimer = INVALID_HANDLE_VALUE;
 
+	// Random sound test stuff
 	IXAudio2* m_pXAudio = nullptr;
 	IXAudio2SourceVoice* m_pSourceVoice = nullptr;
 	int m_buffersInUse = 0;

@@ -48,79 +48,6 @@ private:
 	uint8_t m_instruction;
 };
 
-
-enum class SingleByteInstructions
-{
-	INY = 0xC8, // Increment Y
-	INX = 0xE8, // Increment Y
-	CLI = 0x58, // Clear Interrupt Disable
-	SEI = 0x78, // Set Interrupt Disable
-	CLC = 0x18, // Clear Carry Flag
-	SEC = 0x38, // Set Carry Flag
-	CLD = 0xD8, // Clear Decimal Mode
-	SED = 0xF8, // Set Decimal Mode
-	TXA = 0x8A, // Transfer X to Accumulator
-	TXS = 0x9A, // Transfer X to Stack Pointer
-	TAX = 0xAA, // Transfer Accumulator to X
-	TSX = 0xBA, // Transfer Stack Pointer to X
-	DEX = 0xCA, // Decrement X Register
-	JSR = 0x20, // Jump to Subroutine
-	RTS = 0x60, // Return from Subroutine
-	PHP = 0x08, // Push Processor Status
-	PLA = 0x68, // Pull Accumulator
-	NOP = 0xEA, // No operation
-	PHA = 0x48, // Push Accumulator
-	PLP = 0x28, // Pull Process Status
-	CLV = 0xB8, // Clear Overflow
-	DEY = 0x88, // Decrement Y
-	TAY = 0xA8, // Transfer Accumulator to Y
-	TYA = 0x98, // Transfer Y to Accumulator
-	RTI = 0x40, // Return from Interrupt
-};
-
-inline bool operator==(uint8_t left, SingleByteInstructions right)
-{
-	return left == static_cast<uint8_t>(right);
-}
-
-
-enum class OpCode0
-{
-	BIT     = 0x1, // 001
-	JMP     = 0x2, // 010
-	JMP_ABS = 0x3, // 011
-	STY     = 0x4, // 100
-	LDY     = 0x5, // 101
-	CPY     = 0x6, // 110
-	CPX     = 0x7, // 111
-};
-
-
-enum class OpCode1
-{
-	ORA = 0x0, // 000
-	AND = 0x1, // 001
-	EOR = 0x2, // 010
-	ADC = 0x3, // 011
-	STA = 0x4, // 100
-	LDA = 0x5, // 101
-	CMP = 0x6, // 110
-	SBC = 0x7, // 111
-};
-
-enum class OpCode2
-{
-	ASL = 0x0, // 000
-	ROL = 0x1, // 001
-	LSR = 0x2, // 010 - Logical Shift Right
-	ROR = 0x3, // 011
-	STX = 0x4, // 100
-	LDX = 0x5, // 101
-	DEC = 0x6, // 110
-	INC = 0x7, // 111
-};
-
-
 enum class AddressingMode
 {
 	IMM,   // Immediate
@@ -134,30 +61,6 @@ enum class AddressingMode
 	_ZP_Y, // (Zero Page), Y
 	ACC,   // Accumulator
 	IMP,   // Implied (not a real addressing mode)
-};
-
-enum class AddressingModeClass0
-{
-	_ZPX_ = 0x0, // 000  (Zero Page, X)
-	ZP    = 0x1, // 001  Zero Page
-	IMM   = 0x2, // 010  Immediate
-	ABS   = 0x3, // 011  Absolute
-	_ZP_Y = 0x4, // 100  (Zero Page), Y
-	ZPX   = 0x5, // 101  Zero Page, X
-	ABSY  = 0x6, // 110  Absolute, Y
-	ABSX  = 0x7, // 111  Absolute, X
-};
-
-enum class AddressingModeClass2
-{
-	_ZPX_ = 0x0, // 000  (Zero Page, X)
-	ZP    = 0x1, // 001  Zero Page
-	IMM   = 0x2, // 010  Immediate
-	ABS   = 0x3, // 011  Absolute
-	_ZP_Y = 0x4, // 100  (Zero Page), Y
-	ZPX   = 0x5, // 101  Zero Page, X
-	ABSY  = 0x6, // 110  Absolute, Y
-	ABSX  = 0x7, // 111  Absolute, X
 };
 
 enum class CpuStatusFlag
@@ -187,14 +90,16 @@ public:
 	Cpu6502(const Cpu6502&) = delete;
 	Cpu6502& operator=(const Cpu6502&) = delete;
 
-	void Reset();
-
 	void SetRomMapper(NES::IMapper* pMapper);
 
+	void Reset();
+
 	uint32_t RunNextInstruction();
+	uint32_t RunInstructions(int targetCycles);
+
+	int64_t GetElapsedCycles() const;
 
 	const char* GetDebugState() const;
-
 	uint16_t GetProgramCounter() const { return m_pc; }
 
 	void GenerateNonMaskableInterrupt();
@@ -314,8 +219,6 @@ private:
 
 	// REVIEW: Simulate memory bus?
 	byte m_cpuRam[2*1024 /*2KB*/];
-	uint32_t m_cycles = 0;
-	uint64_t m_totalCycles = 0;
 
 	NES::NES& m_nes;
 	PPU::Ppu& m_ppu;
@@ -326,6 +229,11 @@ private:
 	uint8_t m_ppuCtrlReg1;
 	uint8_t m_ppuCtrlReg2;
 	uint8_t m_ppuStatusReg;
+
+	uint32_t m_currentInstructionCycleCount = 0;
+	//uint64_t m_totalCycles = 0;
+	int64_t m_totalCycles = 0;
+	int64_t m_cyclesRemaining = 0;
 
 	// CPU Registers
 	uint16_t m_pc; // Program counter

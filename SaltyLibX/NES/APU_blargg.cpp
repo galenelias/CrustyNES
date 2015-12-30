@@ -6,6 +6,7 @@
 
 #include "../Util/IAudioDevice.h"
 #include "APU.h"
+#include "Cpu6502.h"
 
 namespace NES { namespace APU { namespace blargg {
 
@@ -16,7 +17,7 @@ class Apu : public IApu
 public:
 	Apu();
 
-	virtual void AddCycles(uint32_t cpuCycles) override;
+	virtual void SetCpu(CPU::Cpu6502* pCpu) override;
 	virtual void WriteMemory8(uint16_t offset, uint8_t value) override;
 	virtual uint8_t ReadStatus() override;
 	virtual void PushAudio() override;
@@ -24,9 +25,11 @@ public:
 	void EnableSound(bool isEnabled) override;
 
 private:
+	cpu_time_t GetElapsedCpuTime() const;
+
 	std::shared_ptr<IAudioDevice> m_spAudioDevice;
 
-	uint32_t m_accumulatedCpuCycles = 0;
+	int64_t m_cpuCyclesBias = 0;
 
 	std::unique_ptr<uint8_t[]> m_spAudioData;
 	uint32_t m_cbAudioData = 0;
@@ -34,6 +37,7 @@ private:
 
 	std::shared_ptr<IAudioSource> m_spAudioSource;
 
+	CPU::Cpu6502* m_pCpu;
 	Blip_Buffer m_blipBuf;
 	Nes_Apu m_nesApu;
 };
@@ -56,6 +60,13 @@ Apu::Apu()
 	});
 }
 
+
+void Apu::SetCpu(CPU::Cpu6502* pCpu)
+{
+	m_pCpu = pCpu;
+}
+
+
 void Apu::EnableSound(bool isEnabled)
 {
 	if (isEnabled)
@@ -64,15 +75,17 @@ void Apu::EnableSound(bool isEnabled)
 		m_nesApu.output(nullptr);
 }
 
-void Apu::AddCycles(uint32_t cpuCycles)
+cpu_time_t Apu::GetElapsedCpuTime() const
 {
-	m_accumulatedCpuCycles += cpuCycles;
+	return static_cast<cpu_time_t>(m_pCpu->GetElapsedCycles() - m_cpuCyclesBias);
 }
+
 
 void Apu::PushAudio()
 {
-	m_nesApu.end_frame(m_accumulatedCpuCycles);
-	m_blipBuf.end_frame(m_accumulatedCpuCycles);
+	const int64_t elapsedCycles = GetElapsedCpuTime();
+	m_nesApu.end_frame(static_cast<cpu_time_t>(elapsedCycles));
+	m_blipBuf.end_frame(static_cast<cpu_time_t>(elapsedCycles));
 
 	if (m_spAudioData == nullptr)
 	{
@@ -101,18 +114,18 @@ void Apu::PushAudio()
 		m_spAudioSource->SetChannelData(pBufferData, cbBufferData, false /*shouldLoop*/);
 		m_spAudioSource->Play();
 	}
-	m_accumulatedCpuCycles = 0;
+	m_cpuCyclesBias += elapsedCycles;
 }
 
 uint8_t Apu::ReadStatus()
 {
-	return m_nesApu.read_status(m_accumulatedCpuCycles);
+	return m_nesApu.read_status(GetElapsedCpuTime());
 }
 
 void Apu::WriteMemory8(uint16_t offset, uint8_t value)
 {
 	if (offset >= m_nesApu.start_addr && offset <= m_nesApu.end_addr)
-		m_nesApu.write_register(m_accumulatedCpuCycles, offset, value);
+		m_nesApu.write_register(GetElapsedCpuTime(), offset, value);
 }
 
 

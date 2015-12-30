@@ -8,7 +8,7 @@
 
 #include "../Util/ComPtr.h"
 #include "../Util/IAudioDevice.h"
-
+#include "Cpu6502.h"
 
 namespace NES { namespace APU {
 
@@ -82,7 +82,8 @@ class Apu : public IApu
 public:
 	Apu();
 
-	virtual void AddCycles(uint32_t cpuCycles) override;
+	virtual void SetCpu(CPU::Cpu6502* pCpu) override;
+	//virtual void AddCycles(uint32_t cpuCycles) override;
 	virtual void WriteMemory8(uint16_t offset, uint8_t value) override;
 	virtual uint8_t ReadStatus() override;
 	virtual void PushAudio() override;
@@ -107,7 +108,7 @@ private:
 	size_t m_cbTriangleAudioData = 0;
 
 	bool m_isSoundEnabled = true;
-	uint32_t m_accumulatedCpuCycles = 0;
+	//uint32_t m_accumulatedCpuCycles = 0;
 
 	std::unique_ptr<uint8_t[]> m_spAudioData;
 	uint32_t m_cbAudioData = 0;
@@ -122,8 +123,7 @@ private:
 	std::shared_ptr<IAudioSource> m_spPulse2AudioSource;
 	std::shared_ptr<IAudioSource> m_spTriangleAudioSource;
 
-	Blip_Buffer m_blipBuf;
-	Nes_Apu m_nesApu;
+	CPU::Cpu6502* m_pCpu;
 };
 
 
@@ -135,12 +135,14 @@ Apu::Apu()
 	m_spPulse2AudioSource = m_spAudioDevice->AddAudioSource();
 	m_spTriangleAudioSource = m_spAudioDevice->AddAudioSource();
 
-	m_blipBuf.sample_rate(44100);
-	m_blipBuf.clock_rate(c_cpuCyclesPerSecond);
+}
 
-	m_nesApu.output(&m_blipBuf);
+void Apu::SetCpu(CPU::Cpu6502* pCpu)
+{
+	m_pCpu = pCpu;
 
 }
+
 
 inline int GetPulseFrequencyFromTimerValue(uint32_t timerPeriod)
 {
@@ -244,12 +246,6 @@ void Apu::GenerateTriangleWaveAudioSourceData(const TriangleWaveParameters& para
 	pAudioSource->Play();
 }
 
-
-void Apu::AddCycles(uint32_t cpuCycles)
-{
-	m_accumulatedCpuCycles += cpuCycles;
-}
-
 void Apu::PushAudio()
 {
 	static const int16_t dutyCycleSequences[4][8] = {
@@ -267,7 +263,7 @@ void Apu::PushAudio()
 	}
 
 	const uint32_t c_cpuCyclesPerSecond = 1789773;
-	uint32_t milliSecondsToPush = m_accumulatedCpuCycles * 1000 / c_cpuCyclesPerSecond;
+	uint32_t milliSecondsToPush = m_pCpu->GetElapsedCycles() * 1000 / c_cpuCyclesPerSecond;
 	uint32_t samplesToGenerate = milliSecondsToPush * m_spPulse1AudioSource->GetSamplesPerSecond() / 1000;
 
 	uint32_t cbBufferData = milliSecondsToPush * m_spPulse1AudioSource->GetSamplesPerSecond() / 1000 * m_spPulse1AudioSource->GetBytesPerSample();
@@ -320,12 +316,12 @@ void Apu::PushAudio()
 	m_spPulse1AudioSource->SetChannelData(pBufferData, cbBufferData, false /*shouldLoop*/);
 	m_spPulse1AudioSource->Play();
 
-	m_accumulatedCpuCycles = 0;
+	//m_accumulatedCpuCycles = 0;
 }
 
 uint8_t Apu::ReadStatus()
 {
-	return m_nesApu.read_status(m_accumulatedCpuCycles);
+	return 0;
 }
 
 void Apu::WriteMemory8(uint16_t offset, uint8_t value)

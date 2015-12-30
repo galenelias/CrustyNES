@@ -335,8 +335,8 @@ void CWinSaltyNESDlg::UpdateRuntimeStats()
 	if (m_loggingEnabled)
 		m_debugFileOutput.flush();
 
-	auto cyclesString = std::to_wstring(m_nes.GetCyclesRanSoFar());
-	SetDlgItemTextW(IDC_CYCLES_DISPLAY, cyclesString.c_str());
+	//auto cyclesString = std::to_wstring(m_nes.GetCyclesRanSoFar());
+	//SetDlgItemTextW(IDC_CYCLES_DISPLAY, cyclesString.c_str());
 
 	wchar_t wzProgramCounter[32];
 	swprintf_s(wzProgramCounter, _countof(wzProgramCounter),L"%04hX", m_nes.GetCpu().GetProgramCounter());
@@ -490,9 +490,9 @@ void CWinSaltyNESDlg::OnBnClickedRunInfinite()
 	{
 		m_runMode = NESRunMode::Continuous;
 		m_frameStopwatch.Start();
-		SetTimer(TIMER_REDRAW, 0, nullptr);
 		//CreateTimerQueueTimer(&m_frameTimer, NULL /*default timer queue*/, FrameTimerProc, this, 1000/60, 1000/60, WT_EXECUTEINTIMERTHREAD /*flags*/);
 
+		SetTimer(TIMER_REDRAW, 0, nullptr);
 		//RenderNextFrame(0,0); // Run as fast as humanly possible for performance measurement reasons
 	}
 	else
@@ -514,7 +514,8 @@ void CWinSaltyNESDlg::RenderFrame()
 				m_debugFileOutput.write(pszDebugString, strlen(pszDebugString));
 			}
 
-			m_nes.RunCycle();
+			//m_nes.RunCycle();
+			m_nes.RunCycles(113);
 
 			if (m_nes.GetPpu().ShouldRender())
 			{

@@ -40,7 +40,7 @@ public:
 	void Reset();
 
 	void RunCycle();
-	int GetCyclesRanSoFar() const;
+	void RunCycles(int numCycles);
 
 	CPU::Cpu6502& GetCpu() { return m_cpu; }
 	PPU::Ppu& GetPpu() { return m_ppu; }
