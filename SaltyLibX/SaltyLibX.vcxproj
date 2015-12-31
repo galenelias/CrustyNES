@@ -178,6 +178,7 @@
     <ClCompile Include="NES\Controller.cpp" />
     <ClCompile Include="NES\Cpu6502.cpp" />
     <ClCompile Include="NES\Mappers\BasePpuMemoryMap.cpp" />
+    <ClCompile Include="NES\Mappers\cnrom.cpp" />
     <ClCompile Include="NES\Mappers\MapperFactory.cpp" />
     <ClCompile Include="NES\Mappers\mmc0.cpp" />
     <ClCompile Include="NES\Mappers\mmc1.cpp" />

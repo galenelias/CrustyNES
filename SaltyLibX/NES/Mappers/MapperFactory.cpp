@@ -11,6 +11,7 @@ MapperPtr CreateMMC0Mapper();
 MapperPtr CreateMMC1Mapper();
 MapperPtr CreateUxROMMapper();
 MapperPtr CreateMMC5Mapper();
+MapperPtr CreateCNROMMapper();
 
 MapperPtr CreateMapper(uint32_t mapperNumber)
 {
@@ -22,6 +23,8 @@ MapperPtr CreateMapper(uint32_t mapperNumber)
 		return CreateMMC1Mapper();
 	case 2:
 		return CreateUxROMMapper();
+	case 3:
+		return CreateCNROMMapper();
 	//case 5:
 	// Still under construction
 	//	return CreateMMC5Mapper();

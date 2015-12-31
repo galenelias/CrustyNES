@@ -197,5 +197,8 @@
     <ClCompile Include="Util\XAudioDevice.cpp">
       <Filter>Source Files\Util</Filter>
     </ClCompile>
+    <ClCompile Include="NES\Mappers\cnrom.cpp">
+      <Filter>Source Files\NES\Mappers</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
