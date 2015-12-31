@@ -26,7 +26,7 @@ struct RenderOptions
 const int c_displayWidth = 256;
 const int c_displayHeight = 240;
 
-typedef DWORD ppuDisplayBuffer_t[c_displayHeight][c_displayWidth];
+typedef uint32_t ppuDisplayBuffer_t[c_displayHeight][c_displayWidth];
 
 
 struct PpuStatusFlag

@@ -16,7 +16,7 @@ const uint16_t c_paletteBkgOffset = 0x3F00;
 const uint16_t c_paletteSprOffset = 0x3F10;
 
 // Color table mapping the NES's color table to RGB values
-static const DWORD c_nesRgbColorTable[64] = {
+static const uint32_t c_nesRgbColorTable[64] = {
 	0x808080, 0x003DA6, 0x0012B0, 0x440096,
 	0xA1005E, 0xC70028, 0xBA0600, 0x8C1700,
 	0x5C2F00, 0x104500, 0x054A00, 0x00472E,
@@ -35,31 +35,43 @@ static const DWORD c_nesRgbColorTable[64] = {
 	0x99FFFC, 0xDDDDDD, 0x111111, 0x111111,
 };
 
-const DWORD c_nesColorYellow = 0xFFFF00;
-const DWORD c_nesColorGreen = 0x00FF00;
-const DWORD c_nesColorGray = 0x808080;
-const DWORD c_nesColorRed = 0xFF0000;
+const uint32_t c_nesColorYellow = 0xFFFF00;
+const uint32_t c_nesColorGreen = 0x00FF00;
+const uint32_t c_nesColorGray = 0x808080;
+const uint32_t c_nesColorRed = 0xFF0000;
 
-static void DrawRectangle(ppuDisplayBuffer_t displayBuffer, DWORD nesColor, int left, int right, int top, int bottom)
+uint32_t ColorAverage(uint32_t color1, uint32_t color2)
+{
+	return (((((color1 >> 24) & 0xFF) + ((color2 >> 24) & 0xFF)) / 2) << 24) |
+	       (((((color1 >> 16) & 0xFF) + ((color2 >> 16) & 0xFF)) / 2) << 16) |
+	       (((((color1 >>  8) & 0xFF) + ((color2 >>  8) & 0xFF)) / 2) <<  8);
+}
+
+void AverageInColor(uint32_t& baseColor, uint32_t newColor)
+{
+	baseColor = ColorAverage(baseColor, newColor);
+}
+
+static void DrawRectangle(ppuDisplayBuffer_t displayBuffer, uint32_t nesColor, int drawRow, int left, int right, int top, int bottom)
 {
 	// Draw top/bottom line
 	for (int iPixelColumn = std::max(0, left); iPixelColumn != right && iPixelColumn < c_displayWidth; ++iPixelColumn)
 	{
-		if (top >= 0 && top < c_displayHeight)
-			displayBuffer[top][iPixelColumn] = nesColor;
+		if (top >= 0 && top < c_displayHeight && top == drawRow)
+			AverageInColor(displayBuffer[top][iPixelColumn], nesColor);
 
-		if (top >= 0 && bottom < c_displayHeight)
-			displayBuffer[bottom][iPixelColumn] = nesColor;
+		if (top >= 0 && bottom < c_displayHeight && bottom == drawRow)
+			AverageInColor(displayBuffer[bottom][iPixelColumn], nesColor);
 	}
 
 	// Draw left/right line
 	for (int iPixelRow = std::max(0, top); iPixelRow != bottom && iPixelRow < c_displayHeight; ++iPixelRow)
 	{
-		if (left >= 0 && left < c_displayWidth)
-			displayBuffer[iPixelRow][left] = nesColor;
+		if (left >= 0 && left < c_displayWidth && iPixelRow == drawRow)
+			AverageInColor(displayBuffer[iPixelRow][left], nesColor);
 
-		if (right < c_displayWidth)
-			displayBuffer[iPixelRow][right] = nesColor;
+		if (right < c_displayWidth && iPixelRow == drawRow)
+			AverageInColor(displayBuffer[iPixelRow][right], nesColor);
 	}
 }
 
@@ -435,10 +447,11 @@ void Ppu::RenderScanline(int scanline)
 
 			const int pixelRow = (scanline + m_verticalScrollOffset) % 8;
 
-			DrawBkgTile(tileNumber, highOrderColorBits, scanline - pixelRow, iColumn * 8 + iColPixelOffset, pixelRow, patternTableOffset, m_screenPixels, m_screenPixelTypes);
+			const int tileTop = scanline - pixelRow;
+			DrawBkgTile(tileNumber, highOrderColorBits, tileTop, iColumn * 8 + iColPixelOffset, pixelRow, patternTableOffset, m_screenPixels, m_screenPixelTypes);
 
-			//if (m_renderOptions.fDrawBackgroundGrid)
-			//	DrawRectangle(m_screenPixels, c_nesColorGray, iColumn*8 + iColPixelOffset, (iColumn+1)*8 + iColPixelOffset,  iRow*8 + iRowPixelOffset, (iRow+1)*8 + iRowPixelOffset);
+			if (m_renderOptions.fDrawBackgroundGrid)
+				DrawRectangle(m_screenPixels, c_nesColorGray, scanline, iColumn*8 + iColPixelOffset, (iColumn+1)*8 + iColPixelOffset, tileTop, tileTop + c_tileSize);
 		}
 	}
 
@@ -474,7 +487,7 @@ void Ppu::RenderScanline(int scanline)
 
 			if (m_renderOptions.fDrawSpriteOutline)
 			{
-				DrawRectangle(m_screenPixels, c_nesColorRed, spriteX, spriteX + 8, spriteY, spriteY + totalPixelRows);
+				DrawRectangle(m_screenPixels, c_nesColorRed, scanline, spriteX, spriteX + 8, spriteY, spriteY + totalPixelRows - 1);
 			}
 		}
 	}
