@@ -129,7 +129,8 @@ void Cpu6502::WriteMemory8(uint16_t offset, uint8_t value)
 		}
 		else if (mappedOffset == 0x2002)
 		{
-			throw std::runtime_error("Unexpected read from PPU status register");
+			// Arkanoid apparently tries to do this... not sure what the expected result is.  Lets try skipping it for now
+			//throw std::runtime_error("Unexpected write of PPU status register");
 		}
 		else if (mappedOffset == 0x2003)
 		{
