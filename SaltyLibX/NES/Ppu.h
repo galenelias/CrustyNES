@@ -124,7 +124,7 @@ private:
 	uint16_t CpuDataIncrementAmount() const;
 
 	uint16_t GetSpriteTileOffset(uint8_t tileNumber, bool is8x8Sprite) const;
-	void DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, int iPixelRow, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer);
+	void DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, int iPixelRow, uint32_t backgroundColor, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer);
 	bool DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, int iPixelRow, bool foregroundSprite, bool flipHorizontally, bool flipVertically, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer);
 
 	struct PpuControlFlags

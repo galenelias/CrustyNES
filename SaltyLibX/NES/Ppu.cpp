@@ -313,7 +313,7 @@ uint16_t Ppu::GetSpriteNametableOffset() const
 }
 
 
-void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, int iPixelRow, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
+void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, int iPixelRow, uint32_t backgroundColor, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer)
 {
 	const uint16_t tileOffsetBase = patternTableOffset + (tileNumber << 4);
 
@@ -325,9 +325,11 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 
 	const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + iPixelRow);
 	const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + iPixelRow + 8);
-	for (uint16_t iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
+	const int leftEdge = m_ppuMaskFlags.showBackgroundOnLeft ? 0 : c_tileSize;
+
+	for (uint16_t iPixelColumn = 0; iPixelColumn != c_tileSize; ++iPixelColumn)
 	{
-		if (iColumn + iPixelColumn < 0)
+		if (iColumn + iPixelColumn < leftEdge)
 			continue;
 
 		if (iColumn + iPixelColumn >= c_displayWidth)
@@ -337,9 +339,8 @@ void Ppu::DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 										 + ((colorByte2 & (1 << (7-iPixelColumn))) >> (7-iPixelColumn) << 1);
 	
 		// All background colors should map to 3F00
-		const uint8_t fullPixelBytes = (lowOrderColorBytes == 0) ? 0 : (lowOrderColorBytes | highOrderPixelData);
-
-		const uint8_t colorDataOffset = ReadMemory8(c_paletteBkgOffset + fullPixelBytes);
+		const uint8_t colorDataOffset = (lowOrderColorBytes == 0) ? backgroundColor
+		                                                          : ReadMemory8(c_paletteBkgOffset + (lowOrderColorBytes | highOrderPixelData));
 
 		displayBuffer[iRow + iPixelRow][iColumn + iPixelColumn] = c_nesRgbColorTable[colorDataOffset];
 		
@@ -371,8 +372,8 @@ bool Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 	const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
 
 	const uint16_t totalTiles = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 2 : 1;
-	uint16_t iTile = iPixelRow / 8;
-	uint16_t iTileRow = iPixelRow % 8;
+	uint16_t iTile = iPixelRow / c_tileSize;
+	uint16_t iTileRow = iPixelRow % c_tileSize;
 
 	const int iPixelRowOffset = flipVertically ? (totalPixelRows - iPixelRow - 1) : (iPixelRow);
 	if (iRow + iPixelRowOffset >= c_displayHeight)
@@ -381,12 +382,13 @@ bool Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 	const uint16_t c_bytesPerTile = 16;
 	const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iTileRow);
 	const uint8_t colorByte2 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iTileRow + 8);
+	const int leftEdge = m_ppuMaskFlags.showSpritesOnLeft ? 0 : c_tileSize;
 
 	bool spriteHit = false;
-	for (uint16_t iPixelColumn = 0; iPixelColumn != 8; ++iPixelColumn)
+	for (uint16_t iPixelColumn = 0; iPixelColumn != c_tileSize; ++iPixelColumn)
 	{
 		const int iPixelColumnOffset = flipHorizontally ? (7 - iPixelColumn) : iPixelColumn;
-		if (iColumn + iPixelColumnOffset >= c_displayWidth)
+		if (iColumn + iPixelColumnOffset < leftEdge || iColumn + iPixelColumnOffset >= c_displayWidth)
 			continue;
 
 		const uint8_t lowOrderColorBytes = ((colorByte1 & (1 << (7 - iPixelColumn))) >> (7 - iPixelColumn))
@@ -429,10 +431,20 @@ void Ppu::RenderScanline(int scanline)
 	const int iRowPixelOffset = -(m_verticalScrollOffset % c_tileSize);
 	const int iColPixelOffset = -(m_horizontalScrollOffset % c_tileSize);
 
+	const uint8_t backgroundColor = ReadMemory8(c_paletteBkgOffset);
+	//uint32_t backgroundColorOffset = c_nesRgbColorTable[colorDataOffset];
+
 	if (m_ppuMaskFlags.showBackground)
 	{
 		const uint16_t iRowTile = ((scanline + m_verticalScrollOffset) / c_tileSize) % c_rows;
 		const bool rowOverflow = ((scanline + m_verticalScrollOffset) / c_tileSize) >= c_rows;
+
+		// If we're supressing the left most column, then fill it in with the background color (PaperBoy is a good example of a game that uses this)
+		if (!m_ppuMaskFlags.showBackgroundOnLeft)
+		{
+			for (int iPixelColumn = 0; iPixelColumn != c_tileSize + 1; ++iPixelColumn)
+				m_screenPixels[scanline][iPixelColumn] = c_nesRgbColorTable[backgroundColor];
+		}
 
 		for (int iColumn = 0; iColumn != c_columnsPerRow + 1; ++iColumn)
 		{
@@ -445,13 +457,13 @@ void Ppu::RenderScanline(int scanline)
 			const uint8_t attributeData = ReadMemory8(xNametable + (c_rows * c_columnsPerRow) + attributeIndex);
 			const uint8_t highOrderColorBits = GetHighOrderColorFromAttributeEntry(attributeData, iRowTile, iColumnTile);
 
-			const int pixelRow = (scanline + m_verticalScrollOffset) % 8;
+			const int pixelRow = (scanline + m_verticalScrollOffset) % c_tileSize;
 
 			const int tileTop = scanline - pixelRow;
-			DrawBkgTile(tileNumber, highOrderColorBits, tileTop, iColumn * 8 + iColPixelOffset, pixelRow, patternTableOffset, m_screenPixels, m_screenPixelTypes);
+			DrawBkgTile(tileNumber, highOrderColorBits, tileTop, iColumn * c_tileSize + iColPixelOffset, pixelRow, backgroundColor, patternTableOffset, m_screenPixels, m_screenPixelTypes);
 
 			if (m_renderOptions.fDrawBackgroundGrid)
-				DrawRectangle(m_screenPixels, c_nesColorGray, scanline, iColumn*8 + iColPixelOffset, (iColumn+1)*8 + iColPixelOffset, tileTop, tileTop + c_tileSize);
+				DrawRectangle(m_screenPixels, c_nesColorGray, scanline, iColumn*c_tileSize + iColPixelOffset, (iColumn+1)*c_tileSize + iColPixelOffset, tileTop, tileTop + c_tileSize);
 		}
 	}
 
@@ -487,7 +499,7 @@ void Ppu::RenderScanline(int scanline)
 
 			if (m_renderOptions.fDrawSpriteOutline)
 			{
-				DrawRectangle(m_screenPixels, c_nesColorRed, scanline, spriteX, spriteX + 8, spriteY, spriteY + totalPixelRows - 1);
+				DrawRectangle(m_screenPixels, c_nesColorRed, scanline, spriteX, spriteX + c_tileSize, spriteY, spriteY + totalPixelRows - 1);
 			}
 		}
 	}
