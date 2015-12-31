@@ -81,8 +81,6 @@ public:
 	bool InVBlank() const { return false; }
 
 	bool ShouldRender();
-	void RenderToBuffer(ppuDisplayBuffer_t displayBuffer, const RenderOptions& options);
-	void RenderToBuffer(const RenderOptions& options);
 	void RenderScanline(int scanline);
 
 	void WriteControlRegister1(uint8_t value); // $2000
@@ -127,8 +125,6 @@ private:
 
 	uint16_t GetSpriteTileOffset(uint8_t tileNumber, bool is8x8Sprite) const;
 	void DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, int iPixelRow, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer);
-	void DrawBkgTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, uint16_t patternTableOffset, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer);
-	bool DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, bool foregroundSprite, bool flipHorizontally, bool flipVertically, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer);
 	bool DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, int iColumn, int iPixelRow, bool foregroundSprite, bool flipHorizontally, bool flipVertically, ppuDisplayBuffer_t displayBuffer, ppuPixelOutputTypeBuffer_t outputTypeBuffer);
 
 	struct PpuControlFlags
