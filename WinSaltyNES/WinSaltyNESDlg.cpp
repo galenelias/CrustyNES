@@ -113,15 +113,17 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
-	ON_BN_CLICKED(IDC_OPEN_ROM, &CWinSaltyNESDlg::OnBnClickedOpenRom)
-	ON_BN_CLICKED(IDC_RUN_INFINITE, &CWinSaltyNESDlg::OnBnClickedRunInfinite)
 	ON_WM_ERASEBKGND()
 	ON_WM_TIMER()
 	ON_BN_CLICKED(IDC_PLAY_MUSIC, &CWinSaltyNESDlg::OnBnClickedPlayMusic)
-	ON_BN_CLICKED(IDC_DEBUG_RENDERING, &CWinSaltyNESDlg::OnBnClickedDebugRendering)
-	ON_BN_CLICKED(IDC_ENABLESOUND, &CWinSaltyNESDlg::OnBnClickedEnablesound)
 	ON_BN_CLICKED(IDC_STOP_MUSIC, &CWinSaltyNESDlg::OnBnClickedStopMusic)
 	ON_MESSAGE(WM_RENDERFRAME, RenderNextFrame)
+	ON_COMMAND(ID_FILE_OPENROM, &CWinSaltyNESDlg::OnFileOpenRom)
+	ON_COMMAND(ID_NES_SOUND, &CWinSaltyNESDlg::OnNesSound)
+	ON_COMMAND(ID_NES_PLAYPAUSE, &CWinSaltyNESDlg::OnNesPlayPause)
+	ON_COMMAND(ID_DEBUG_DEBUGRENDERING, &CWinSaltyNESDlg::OnDebugDebugrendering)
+	ON_COMMAND(ID_NES_RESET, &CWinSaltyNESDlg::OnNesReset)
+	ON_COMMAND(ID_FILE_EXIT, &CWinSaltyNESDlg::OnFileExit)
 END_MESSAGE_MAP()
 
 
@@ -156,14 +158,11 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 	//OpenRomFile(L"C:\\Users\\gelias\\OneDrive\\Documents\\NES_Rom_Backups\\LegendOfZelda.nes");
-	OpenRomFile(L"C:\\Users\\Galen\\OneDrive\\Documents\\NES_Rom_Backups\\LegendOfZelda.nes");
+	//OpenRomFile(L"C:\\Users\\Galen\\OneDrive\\Documents\\NES_Rom_Backups\\LegendOfZelda.nes");
 	SetupRenderBitmap();
 
 	// Set controls initial states
-	CButton* pButton = static_cast<CButton*>(this->GetDlgItem(IDC_ENABLESOUND));
-	pButton->SetCheck(TRUE);
 	SetDlgItemTextW(IDC_EDIT_WAVE_HZ, L"200");
-
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -453,18 +452,6 @@ STDMETHODIMP_(void) CWinSaltyNESDlg::OnBufferEnd(void* /*pBufferContext*/)
 }
 
 
-void CWinSaltyNESDlg::OnBnClickedOpenRom()
-{
-	std::wstring romFileName = PickRomFile();
-
-	if (!romFileName.empty())
-	{
-		if (OpenRomFile(romFileName.c_str()))
-			OnBnClickedRunInfinite();
-	}
-}
-
-
 void CALLBACK FrameTimerProc(PVOID lpParameter, BOOLEAN /*timerOrWaitFired*/)
 {
 	CWinSaltyNESDlg* pDlg = (CWinSaltyNESDlg*)lpParameter;
@@ -484,24 +471,6 @@ void CWinSaltyNESDlg::StopTimer()
 	//DeleteTimerQueueTimer(NULL, m_frameTimer, NULL);
 }
 
-void CWinSaltyNESDlg::OnBnClickedRunInfinite()
-{
-	if (m_runMode != NESRunMode::Continuous && m_isRomLoaded)
-	{
-		m_runMode = NESRunMode::Continuous;
-		m_frameStopwatch.Start();
-		//CreateTimerQueueTimer(&m_frameTimer, NULL /*default timer queue*/, FrameTimerProc, this, 1000/60, 1000/60, WT_EXECUTEINTIMERTHREAD /*flags*/);
-
-		SetTimer(TIMER_REDRAW, 0, nullptr);
-		//RenderNextFrame(0,0); // Run as fast as humanly possible for performance measurement reasons
-	}
-	else
-	{
-		StopTimer();
-	}
-}
-
-
 void CWinSaltyNESDlg::RenderFrame()
 {
 	try
@@ -514,8 +483,8 @@ void CWinSaltyNESDlg::RenderFrame()
 				m_debugFileOutput.write(pszDebugString, strlen(pszDebugString));
 			}
 
-			//m_nes.RunCycle();
-			m_nes.RunCycles(113);
+			m_nes.RunCycle();
+			//m_nes.RunCycles(113);
 
 			if (m_nes.GetPpu().ShouldRender())
 			{
@@ -661,23 +630,6 @@ void CWinSaltyNESDlg::OnBnClickedStopMusic()
 }
 
 
-void CWinSaltyNESDlg::OnBnClickedDebugRendering()
-{
-	bool fDebugRender = IsDlgButtonChecked(IDC_DEBUG_RENDERING) != 0;
-
-	m_renderOptions.fDrawBackgroundGrid = fDebugRender;
-	m_renderOptions.fDrawSpriteOutline = fDebugRender;
-
-	m_nes.GetPpu().SetRenderOptions(m_renderOptions);
-}
-
-
-void CWinSaltyNESDlg::OnBnClickedEnablesound()
-{
-	bool isSoundEnabled = IsDlgButtonChecked(IDC_ENABLESOUND) != 0;
-	m_nes.GetApu().EnableSound(isSoundEnabled);
-}
-
 // https://social.msdn.microsoft.com/Forums/en-US/2a2a4106-5b00-4763-b08c-99f7a45ba552/forcing-message-processing?forum=vcmfcatl
 void GiveTime()
 {
@@ -703,4 +655,86 @@ afx_msg LRESULT CWinSaltyNESDlg::RenderNextFrame(WPARAM /*wParam*/, LPARAM /*lPa
 	PostMessage(WM_RENDERFRAME);
 
 	return 0;
+}
+
+
+void CWinSaltyNESDlg::OnFileOpenRom()
+{
+	std::wstring romFileName = PickRomFile();
+
+	if (!romFileName.empty())
+	{
+		if (OpenRomFile(romFileName.c_str()))
+			PlayRom();
+	}
+}
+
+
+void CWinSaltyNESDlg::OnNesSound()
+{
+	m_isSoundEnabled = !m_isSoundEnabled;
+	m_nes.GetApu().EnableSound(m_isSoundEnabled);
+
+	CMenu *pMenu = GetMenu();
+	if (pMenu != nullptr)
+	{
+		pMenu->CheckMenuItem(ID_NES_SOUND, MF_BYCOMMAND | (m_isSoundEnabled ? MF_CHECKED : MF_UNCHECKED));
+	}
+}
+
+
+void CWinSaltyNESDlg::PlayRom()
+{
+	m_runMode = NESRunMode::Continuous;
+	m_frameStopwatch.Start();
+	//CreateTimerQueueTimer(&m_frameTimer, NULL /*default timer queue*/, FrameTimerProc, this, 1000/60, 1000/60, WT_EXECUTEINTIMERTHREAD /*flags*/);
+
+	SetTimer(TIMER_REDRAW, 0, nullptr);
+	//RenderNextFrame(0,0); // Run as fast as humanly possible for performance measurement reasons
+}
+
+void CWinSaltyNESDlg::PauseRom()
+{
+	StopTimer();
+}
+
+
+void CWinSaltyNESDlg::OnNesPlayPause()
+{
+	if (m_runMode != NESRunMode::Continuous && m_isRomLoaded)
+	{
+		PlayRom();
+	}
+	else
+	{
+		PauseRom();
+	}
+}
+
+
+void CWinSaltyNESDlg::OnDebugDebugrendering()
+{
+	m_isDebugRenderingEnabled = !m_isDebugRenderingEnabled;
+
+	CMenu *pMenu = GetMenu();
+	if (pMenu != nullptr)
+	{
+		pMenu->CheckMenuItem(ID_DEBUG_DEBUGRENDERING, MF_BYCOMMAND | (m_isDebugRenderingEnabled ? MF_CHECKED : MF_UNCHECKED));
+	}
+
+	m_renderOptions.fDrawBackgroundGrid = m_isDebugRenderingEnabled;
+	m_renderOptions.fDrawSpriteOutline = m_isDebugRenderingEnabled;
+	m_nes.GetPpu().SetRenderOptions(m_renderOptions);
+}
+
+
+void CWinSaltyNESDlg::OnNesReset()
+{
+	m_nes.Reset();
+}
+
+
+void CWinSaltyNESDlg::OnFileExit()
+{
+	this->OnOK();
 }
