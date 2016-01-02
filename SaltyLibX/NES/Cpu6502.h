@@ -236,11 +236,11 @@ private:
 	int64_t m_cyclesRemaining = 0;
 
 	// CPU Registers
-	uint16_t m_pc; // Program counter
-	uint8_t m_sp; // stack pointer
-	uint8_t m_acc;
-	uint8_t m_x; // Index Register X
-	uint8_t m_y; // Index Register Y
+	uint16_t m_pc = 0; // Program counter
+	uint8_t m_sp = 0; // stack pointer
+	uint8_t m_acc = 0;
+	uint8_t m_x = 0; // Index Register X
+	uint8_t m_y = 0; // Index Register Y
 	uint8_t m_status; // (P) processor status (NV.BDIZC) (N)egative,o(V)erflow,(B)reak,(D)ecimal,(I)nterrupt disable, (Z)ero Flag
 };
 

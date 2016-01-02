@@ -20,6 +20,7 @@ public:
 
 	virtual void SetCpu(CPU::Cpu6502* pCpu) = 0;
 
+	virtual void Reset(bool isHardReset) = 0;
 	virtual void WriteMemory8(uint16_t offset, uint8_t value) = 0;
 	virtual uint8_t ReadStatus() = 0;
 	virtual void PushAudio() = 0;

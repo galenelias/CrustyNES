@@ -17,6 +17,7 @@ class Apu : public IApu
 public:
 	Apu();
 
+	virtual void Reset(bool isHardReset) override;
 	virtual void SetCpu(CPU::Cpu6502* pCpu) override;
 	virtual void WriteMemory8(uint16_t offset, uint8_t value) override;
 	virtual uint8_t ReadStatus() override;
@@ -64,6 +65,13 @@ Apu::Apu()
 void Apu::SetCpu(CPU::Cpu6502* pCpu)
 {
 	m_pCpu = pCpu;
+}
+
+
+void Apu::Reset(bool isHardReset)
+{
+	m_nesApu.reset();
+	m_cpuCyclesBias = 0;
 }
 
 

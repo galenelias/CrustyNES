@@ -79,9 +79,15 @@ uint8_t CNROMMapper::ReadAddress(uint16_t address)
 			else
 				return m_prgRom[address - 0x8000];
 		}
+		else
+		{
+			throw std::runtime_error("Unexpected mapper address");
+		}
 	}
 	else
+	{
 		throw std::runtime_error("Unexpected mapper address");
+	}
 }
 
 

@@ -82,6 +82,7 @@ class Apu : public IApu
 public:
 	Apu();
 
+	virtual void Reset(bool isHardReset) override {}
 	virtual void SetCpu(CPU::Cpu6502* pCpu) override;
 	//virtual void AddCycles(uint32_t cpuCycles) override;
 	virtual void WriteMemory8(uint16_t offset, uint8_t value) override;
@@ -108,12 +109,9 @@ private:
 	size_t m_cbTriangleAudioData = 0;
 
 	bool m_isSoundEnabled = true;
-	//uint32_t m_accumulatedCpuCycles = 0;
-
 	std::unique_ptr<uint8_t[]> m_spAudioData;
 	uint32_t m_cbAudioData = 0;
 	uint32_t m_audioWriteOffset = 0;
-	//uint32_t m_queuedBuffers = 0;
 
 	std::unique_ptr<uint8_t[]> m_spPulse1AudioData;
 	std::unique_ptr<uint8_t[]> m_spPulse2AudioData;
@@ -263,7 +261,7 @@ void Apu::PushAudio()
 	}
 
 	const uint32_t c_cpuCyclesPerSecond = 1789773;
-	uint32_t milliSecondsToPush = m_pCpu->GetElapsedCycles() * 1000 / c_cpuCyclesPerSecond;
+	uint32_t milliSecondsToPush = (uint32_t)(m_pCpu->GetElapsedCycles() * 1000 / c_cpuCyclesPerSecond);
 	uint32_t samplesToGenerate = milliSecondsToPush * m_spPulse1AudioSource->GetSamplesPerSecond() / 1000;
 
 	uint32_t cbBufferData = milliSecondsToPush * m_spPulse1AudioSource->GetSamplesPerSecond() / 1000 * m_spPulse1AudioSource->GetBytesPerSample();

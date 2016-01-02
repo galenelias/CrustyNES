@@ -41,7 +41,8 @@ void NES::LoadRomFile(IReadableFile* pRomFile)
 void NES::Reset()
 {
 	m_cpu.Reset();
-	//m_ppu.Reset() // ?
+	m_ppu.Reset();
+	m_spApu->Reset(false /*isHardReset*/);
 }
 
 }

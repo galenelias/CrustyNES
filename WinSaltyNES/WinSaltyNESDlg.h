@@ -65,6 +65,9 @@ private:
 	bool OpenRomFile(LPCWSTR pwzRomFile);
 	void StartLogging();
 
+	void PlayRom();
+	void PauseRom();
+
 	void PlayRandomAudio(int hz);
 	void PlayRandomAudio();
 
@@ -82,7 +85,8 @@ private:
 
 	NESRunMode m_runMode = NESRunMode::Paused;
 
-	PPU::RenderOptions m_renderOptions;
+	bool m_isSoundEnabled = true;
+
 	CBitmap m_nesRenderBitmap;
 	BITMAPINFO m_nesRenderBitmapInfo;
 
@@ -90,20 +94,26 @@ private:
 	Stopwatch m_frameStopwatch;
 	HANDLE m_frameTimer = INVALID_HANDLE_VALUE;
 
+	// Debug options
+	bool m_isDebugRenderingEnabled = false;
+	PPU::RenderOptions m_renderOptions;
+
 	// Random sound test stuff
 	IXAudio2* m_pXAudio = nullptr;
 	IXAudio2SourceVoice* m_pSourceVoice = nullptr;
 	int m_buffersInUse = 0;
 
 public:
-	afx_msg void OnBnClickedOpenRom();
-	afx_msg void OnBnClickedRunInfinite();
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	afx_msg void OnBnClickedPlayMusic();
-	afx_msg void OnBnClickedDebugRendering();
-	afx_msg void OnBnClickedEnablesound();
 	afx_msg void OnBnClickedStopMusic();
 
 	afx_msg LRESULT RenderNextFrame(WPARAM wParam, LPARAM lParam);
+	afx_msg void OnFileOpenRom();
+	afx_msg void OnNesSound();
+	afx_msg void OnNesPlayPause();
+	afx_msg void OnDebugDebugrendering();
+	afx_msg void OnNesReset();
+	afx_msg void OnFileExit();
 };

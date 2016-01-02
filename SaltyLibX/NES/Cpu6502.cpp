@@ -125,7 +125,7 @@ void Cpu6502::WriteMemory8(uint16_t offset, uint8_t value)
 		}
 		else if (mappedOffset == 0x2001)
 		{
-			m_ppu.WriteControlRegister2(value);
+			m_ppu.WriteMask(value);
 		}
 		else if (mappedOffset == 0x2002)
 		{

@@ -78,13 +78,15 @@ public:
 	void SetRenderOptions(const RenderOptions& renderOptions);
 	void SetCpu(CPU::Cpu6502* pCpu);
 
+	void Reset();
+
 	bool InVBlank() const { return false; }
 
 	bool ShouldRender();
 	void RenderScanline(int scanline);
 
 	void WriteControlRegister1(uint8_t value); // $2000
-	void WriteControlRegister2(uint8_t value); // $2001
+	void WriteMask(uint8_t value); // $2001
 	uint8_t ReadPpuStatus();
 	void WriteCpuAddressRegister(uint8_t value);
 	void WriteCpuDataRegister(uint8_t value);   //$2007
@@ -159,7 +161,7 @@ private:
 
 	union
 	{
-		uint8_t m_ppuCtrl2;
+		uint8_t m_ppuMaskByte;
 		PpuMaskFlags m_ppuMaskFlags;
 	};
 	

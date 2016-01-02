@@ -92,6 +92,24 @@ void Ppu::SetRenderOptions(const RenderOptions& renderOptions)
 	m_renderOptions = renderOptions;
 }
 
+void Ppu::Reset()
+{
+	m_shouldRender = false;
+	// m_cpuPpuAddr is unchanged
+	m_scrollWriteParity = 0;
+	m_horizontalScrollOffset = 0;
+	m_verticalScrollOffset = 0;
+	m_ppuCtrl1 = 0;
+	m_ppuMaskByte = 0;
+
+	// ?
+	// m_scanline
+	m_cycleCount = 0;
+	m_scanline = 241;
+
+}
+
+
 uint8_t Ppu::ReadPpuStatus()
 {
 	// Clear v-blank when ppu status is checked.
@@ -219,9 +237,9 @@ void Ppu::UpdateStatusWithLastWrittenRegister(uint8_t value)
 }
 
 
-void Ppu::WriteControlRegister2(uint8_t value)
+void Ppu::WriteMask(uint8_t value)
 {
-	m_ppuCtrl2 = value;
+	m_ppuMaskByte = value;
 }
 
 
@@ -371,13 +389,14 @@ bool Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 	const uint16_t tileOffsetBase = GetSpriteTileOffset(tileNumber, m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x8);
 	const int totalPixelRows = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 16 : 8;
 
-	const uint16_t totalTiles = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 2 : 1;
-	uint16_t iTile = iPixelRow / c_tileSize;
-	uint16_t iTileRow = iPixelRow % c_tileSize;
-
-	const int iPixelRowOffset = flipVertically ? (totalPixelRows - iPixelRow - 1) : (iPixelRow);
-	if (iRow + iPixelRowOffset >= c_displayHeight)
+	if (iRow + iPixelRow >= c_displayHeight)
 		return false;
+
+	const int iSourceRowOffset = flipVertically ? (totalPixelRows - iPixelRow - 1) : (iPixelRow);
+
+	const uint16_t totalTiles = (m_ppuCtrlFlags.spriteSize == SpriteSize::Size8x16) ? 2 : 1;
+	uint16_t iTile = iSourceRowOffset / c_tileSize;
+	uint16_t iTileRow = iSourceRowOffset % c_tileSize;
 
 	const uint16_t c_bytesPerTile = 16;
 	const uint8_t colorByte1 = ReadMemory8(tileOffsetBase + (iTile * c_bytesPerTile) + iTileRow);
@@ -398,17 +417,17 @@ bool Ppu::DrawSprTile(uint8_t tileNumber, uint8_t highOrderPixelData, int iRow, 
 		const uint8_t colorDataOffset = ReadMemory8(c_paletteSprOffset + fullPixelBytes);
 
 		// TODO: Need to emulate the sprite priority 'bug':  http://wiki.nesdev.com/w/index.php/PPU_sprite_priority
-		if (lowOrderColorBytes != 0 && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))
+		if (lowOrderColorBytes != 0 && (outputTypeBuffer[iRow + iPixelRow][iColumn + iPixelColumnOffset] == PixelOutputType::Background))
 		{
 			spriteHit = true;
 		}
 
 		if (lowOrderColorBytes != 0
-			&& ((outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::None)
-				|| (foregroundSprite && (outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] == PixelOutputType::Background))))
+			&& ((outputTypeBuffer[iRow + iPixelRow][iColumn + iPixelColumnOffset] == PixelOutputType::None)
+				|| (foregroundSprite && (outputTypeBuffer[iRow + iPixelRow][iColumn + iPixelColumnOffset] == PixelOutputType::Background))))
 		{
-			displayBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = c_nesRgbColorTable[colorDataOffset];
-			outputTypeBuffer[iRow + iPixelRowOffset][iColumn + iPixelColumnOffset] = PixelOutputType::Sprite;
+			displayBuffer[iRow + iPixelRow][iColumn + iPixelColumnOffset] = c_nesRgbColorTable[colorDataOffset];
+			outputTypeBuffer[iRow + iPixelRow][iColumn + iPixelColumnOffset] = PixelOutputType::Sprite;
 		}
 	}
 
