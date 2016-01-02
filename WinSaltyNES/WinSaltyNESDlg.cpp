@@ -26,7 +26,6 @@
 #define WM_RENDERFRAME (WM_APP + 1)
 
 const DWORD TIMER_REDRAW = 0;
-const DWORD TIMER_SOUNDREFRESH = 1;
 
 class CWin32ReadOnlyFile : public IReadableFile
 {
@@ -115,8 +114,6 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_WM_ERASEBKGND()
 	ON_WM_TIMER()
-	ON_BN_CLICKED(IDC_PLAY_MUSIC, &CWinSaltyNESDlg::OnBnClickedPlayMusic)
-	ON_BN_CLICKED(IDC_STOP_MUSIC, &CWinSaltyNESDlg::OnBnClickedStopMusic)
 	ON_MESSAGE(WM_RENDERFRAME, RenderNextFrame)
 	ON_COMMAND(ID_FILE_OPENROM, &CWinSaltyNESDlg::OnFileOpenRom)
 	ON_COMMAND(ID_NES_SOUND, &CWinSaltyNESDlg::OnNesSound)
@@ -344,114 +341,6 @@ void CWinSaltyNESDlg::UpdateRuntimeStats()
 }
 
 
-void CWinSaltyNESDlg::PlayRandomAudio()
-{
-	CStringW strHz;
-	GetDlgItemTextW(IDC_EDIT_WAVE_HZ, strHz);
-
-	int hz = wcstol((LPCWSTR)strHz, nullptr, 10);
-	PlayRandomAudio(hz);
-}
-
-
-void CWinSaltyNESDlg::PlayRandomAudio(int hz)
-{
-	HRESULT hr = S_OK;
-
-	if (hz == 0)
-		return;
-
-	if (m_pXAudio == nullptr)
-	{
-		IXAudio2MasteringVoice * pMasteringVoice;
-		CoInitializeEx(NULL, COINIT_MULTITHREADED);
-		//create the engine
-		if (FAILED(XAudio2Create(&m_pXAudio)))
-			return;
-
-		hr = m_pXAudio->CreateMasteringVoice(&pMasteringVoice);
-		if (FAILED(hr))
-			return;
-	}
-
-	const int c_samplesPerSecond = 44100;
-	const int c_bytesPerSample = 2;
-
-	if (m_pSourceVoice == nullptr)
-	{
-		// Create a source voice
-		WAVEFORMATEX waveformat;
-		waveformat.wFormatTag = WAVE_FORMAT_PCM;
-		waveformat.nChannels = 1;
-		waveformat.nSamplesPerSec = c_samplesPerSecond;
-		waveformat.nAvgBytesPerSec = c_samplesPerSecond * c_bytesPerSample;
-		waveformat.nBlockAlign = c_bytesPerSample;
-		waveformat.wBitsPerSample = c_bytesPerSample * 8;
-		waveformat.cbSize = 0;
-		hr = m_pXAudio->CreateSourceVoice(&m_pSourceVoice, &waveformat, 0 /*flags*/, XAUDIO2_DEFAULT_FREQ_RATIO,
-			this);
-		if (FAILED(hr))
-			return;
-
-		m_pSourceVoice->SetVolume(0.1f);
-	}
-
-	const int c_samplesPerBuffer = 2;
-	if (m_buffersInUse == c_samplesPerBuffer)
-		return;
-
-	// This should be redundant with our explicit buffersInUse tracking
-	//XAUDIO2_VOICE_STATE voiceState;
-	//m_pSourceVoice->GetState(&voiceState, XAUDIO2_VOICE_NOSAMPLESPLAYED);
-	//if (voiceState.BuffersQueued > 1)
-	//	return;
-
-	// Rotate samples in a single static buffer
-	const int c_bytesPerDeciSecond = c_samplesPerSecond / 10 * 2;
-	static byte s_soundData[c_samplesPerBuffer * c_bytesPerDeciSecond];
-	static int s_bufferSampleOffset = 0;
-	byte* soundData = s_soundData + s_bufferSampleOffset * c_bytesPerDeciSecond;
-	s_bufferSampleOffset++;
-	s_bufferSampleOffset %= c_samplesPerBuffer;
-
-	int c_wavesPerSec = hz;
-	int c_wavesPerDeciSec = hz / 10;
-	int c_samplesPerWave = 44100 / c_wavesPerSec;
-
-	// Fill the array with sound data
-	const int c_deciSeconds = 1;
-	for (int index = 0, second = 0; second < c_deciSeconds; second++)
-	{
-		for (int cycle = 0; cycle < c_wavesPerDeciSec; cycle++)
-		{
-			for (int sample = 0; sample < c_samplesPerWave; sample++)
-			{
-				short value = sample < (c_samplesPerWave / 2) ? 32767 : -32768;
-				soundData[index++] = value & 0xFF;
-				soundData[index++] = (value >> 8) & 0xFF;
-			}
-		}
-	}
-
-	// Create a button to reference the byte array
-	XAUDIO2_BUFFER buffer = { 0 };
-	buffer.AudioBytes = c_deciSeconds * c_wavesPerDeciSec * c_samplesPerWave * c_bytesPerSample;
-	buffer.pAudioData = soundData;
-	buffer.Flags = XAUDIO2_END_OF_STREAM;
-
-	// Submit the buffer
-	++m_buffersInUse;
-	hr = m_pSourceVoice->SubmitSourceBuffer(&buffer);
-	if (FAILED(hr))
-		return;
-}
-
-STDMETHODIMP_(void) CWinSaltyNESDlg::OnBufferEnd(void* /*pBufferContext*/)
-{
-	--m_buffersInUse;
-}
-
-
 void CALLBACK FrameTimerProc(PVOID lpParameter, BOOLEAN /*timerOrWaitFired*/)
 {
 	CWinSaltyNESDlg* pDlg = (CWinSaltyNESDlg*)lpParameter;
@@ -549,9 +438,6 @@ void CWinSaltyNESDlg::OnTimer(UINT_PTR nIDEvent)
 	case TIMER_REDRAW:
 		RenderFrame();
 		break;
-	case TIMER_SOUNDREFRESH:
-		PlayRandomAudio();
-		break;
 	}
 
 	CDialogEx::OnTimer(nIDEvent);
@@ -598,35 +484,6 @@ BOOL CWinSaltyNESDlg::PreTranslateMessage(MSG* pMsg)
 		}
 	}
 	return FALSE;
-}
-
-
-void CWinSaltyNESDlg::OnBnClickedPlayMusic()
-{
-	PlayRandomAudio();
-	SetTimer(TIMER_SOUNDREFRESH, 90, nullptr);
-
-	if (m_pSourceVoice != nullptr)
-	{
-		HRESULT hr = m_pSourceVoice->Start();
-		if (FAILED(hr))
-			return;
-	}
-
-}
-
-
-void CWinSaltyNESDlg::OnBnClickedStopMusic()
-{
-	// Stop the source voice
-	if (m_pSourceVoice != nullptr)
-	{
-		HRESULT hr = m_pSourceVoice->Stop();
-		if (FAILED(hr))
-			return;
-	}
-
-	KillTimer(TIMER_SOUNDREFRESH);
 }
 
 

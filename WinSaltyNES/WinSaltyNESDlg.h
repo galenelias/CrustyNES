@@ -13,7 +13,7 @@
 #include <xaudio2.h>
 
 // CWinSaltyNESDlg dialog
-class CWinSaltyNESDlg : public CDialogEx, public IXAudio2VoiceCallback
+class CWinSaltyNESDlg : public CDialogEx
 {
 // Construction
 public:
@@ -30,15 +30,6 @@ protected:
 
 // Implementation
 protected:
-	// IXAudio2VoiceCallback methods.  We only use OnBufferEnd
-	STDMETHOD_(void, OnVoiceProcessingPassStart) (THIS_ UINT32 /*BytesRequired*/) override {}
-    STDMETHOD_(void, OnVoiceProcessingPassEnd) (THIS) override {}
-    STDMETHOD_(void, OnStreamEnd) (THIS) override {}
-    STDMETHOD_(void, OnBufferStart) (THIS_ void* /*pBufferContext*/) override {}
-    STDMETHOD_(void, OnBufferEnd) (THIS_ void* pBufferContext) override;
-    STDMETHOD_(void, OnLoopEnd) (THIS_ void* /*pBufferContext*/) override {}
-    STDMETHOD_(void, OnVoiceError) (THIS_ void* /*pBufferContext*/, HRESULT /*Error*/) override {}
-
 	virtual BOOL PreTranslateMessage(MSG* pMsg);
 
 	HICON m_hIcon;
@@ -52,24 +43,20 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 private:
+	void SetupRenderBitmap();
 	void RenderFrame();
+	void PaintNESFrame(CDC* pDC);
 	void StopTimer();
 	void IncrementFrameCount(bool shouldUpdateFpsCounter);
-
-	void PaintNESFrame(CDC* pDC);
-	void SetupRenderBitmap();
 
 	void UpdateRuntimeStats();
 
 	static std::wstring PickRomFile();
 	bool OpenRomFile(LPCWSTR pwzRomFile);
-	void StartLogging();
-
 	void PlayRom();
 	void PauseRom();
 
-	void PlayRandomAudio(int hz);
-	void PlayRandomAudio();
+	void StartLogging();
 
 	bool m_loggingEnabled = false;
 	std::ofstream m_debugFileOutput;
@@ -85,29 +72,19 @@ private:
 
 	NESRunMode m_runMode = NESRunMode::Paused;
 
-	bool m_isSoundEnabled = true;
-
 	CBitmap m_nesRenderBitmap;
 	BITMAPINFO m_nesRenderBitmapInfo;
+	PPU::RenderOptions m_renderOptions;
+	bool m_isSoundEnabled = true;
+	bool m_isDebugRenderingEnabled = false;
 
 	MovingAverage<LONGLONG, 30> m_fpsAverage;
 	Stopwatch m_frameStopwatch;
 	HANDLE m_frameTimer = INVALID_HANDLE_VALUE;
 
-	// Debug options
-	bool m_isDebugRenderingEnabled = false;
-	PPU::RenderOptions m_renderOptions;
-
-	// Random sound test stuff
-	IXAudio2* m_pXAudio = nullptr;
-	IXAudio2SourceVoice* m_pSourceVoice = nullptr;
-	int m_buffersInUse = 0;
-
 public:
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
-	afx_msg void OnBnClickedPlayMusic();
-	afx_msg void OnBnClickedStopMusic();
 
 	afx_msg LRESULT RenderNextFrame(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnFileOpenRom();

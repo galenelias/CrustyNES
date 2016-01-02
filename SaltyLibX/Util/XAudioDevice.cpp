@@ -110,7 +110,7 @@ void XAudioSource::Initialize(IXAudio2* pXAudio)
 void XAudioSource::SetChannelData(const uint8_t* pData, size_t cbData, bool /*shouldLoop*/)
 {
 	XAUDIO2_VOICE_STATE voiceState;
-	m_pXAudioSourceVoice->GetState(&voiceState, 0);
+	m_pXAudioSourceVoice->GetState(&voiceState);
 
 	// Hacky: Avoid pile up if the audio engine is running faster than realtime.
 	//  We will just drop new frames if things are getting jammed up. We should ideally
