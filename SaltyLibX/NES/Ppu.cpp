@@ -219,6 +219,11 @@ uint8_t Ppu::ReadMemory8(uint16_t offset)
 
 void Ppu::WriteMemory8(uint16_t offset, uint8_t value)
 {
+	// Certain addresses are actually mirrors, so do this translation before sending the write to the mapper VRAM
+	//  See: http://wiki.nesdev.com/w/index.php/PPU_palettes
+	if ((offset & 0x3FF3) == 0x3F10)
+		offset &= 0x3F0F;
+
 	m_pMapper->WriteChrAddress(offset, value);
 }
 
@@ -451,7 +456,6 @@ void Ppu::RenderScanline(int scanline)
 	const int iColPixelOffset = -(m_horizontalScrollOffset % c_tileSize);
 
 	const uint8_t backgroundColor = ReadMemory8(c_paletteBkgOffset);
-	//uint32_t backgroundColorOffset = c_nesRgbColorTable[colorDataOffset];
 
 	if (m_ppuMaskFlags.showBackground)
 	{
