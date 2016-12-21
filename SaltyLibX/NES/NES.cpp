@@ -7,8 +7,8 @@ namespace NES
 
 
 NES::NES()
-	//: m_spApu(APU::CreateApu())
-	: m_spApu(APU::blargg::CreateBlarggApu())
+	: m_spApu(APU::CreateApu())
+	//: m_spApu(APU::blargg::CreateBlarggApu())
 	, m_cpu(*this)
 {
 	m_ppu.SetCpu(&m_cpu);

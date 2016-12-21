@@ -299,17 +299,17 @@ uint32_t Ppu::GetScanline() const
 
 bool Ppu::ShouldRender()
 {
-	bool shouldRender = m_shouldRender;
+	const bool shouldRender = m_shouldRender;
 	if (shouldRender)
 		m_shouldRender = false;
 	return shouldRender;
 }
 
+
 const ppuDisplayBuffer_t& Ppu::GetDisplayBuffer() const
 {
 	return m_screenPixels;
 }
-
 
 
 uint8_t GetHighOrderColorFromAttributeEntry(uint8_t attributeData, int iRow, int iColumn)
