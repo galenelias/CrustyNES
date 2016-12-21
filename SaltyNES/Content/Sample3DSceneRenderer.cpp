@@ -158,6 +158,8 @@ void Sample3DSceneRenderer::Render()
 			break;
 	}
 
+	m_nes.GetApu().PushAudio();
+
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
 	D3D11_MAPPED_SUBRESOURCE mappedResource = {};
