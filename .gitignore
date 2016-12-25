@@ -6,6 +6,13 @@
 *.user
 *.sln.docstates
 
+# Intellisense database
+*.VC.opendb
+*.VC.db
+
+# XAML Generated Files
+Generated Files/
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
