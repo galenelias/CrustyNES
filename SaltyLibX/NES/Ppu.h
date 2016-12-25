@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 // Right now, our pixel output is stored with blue as the least significant value, so we can't use Window's default RGB macro
-#define PPU_RGB(r,g,b)          ((COLORREF)(((BYTE)(b)|((WORD)((BYTE)(g))<<8))|(((DWORD)(BYTE)(r))<<16)))
+#define PPU_RGB(r,g,b)  ((COLORREF)(((BYTE)(b)|((WORD)((BYTE)(g))<<8))|(((DWORD)(BYTE)(r))<<16)))
 
 namespace NES {
 	class NESRom;
@@ -31,7 +31,7 @@ typedef uint32_t ppuDisplayBuffer_t[c_displayHeight][c_displayWidth];
 
 struct PpuStatusFlag
 {
-	uint8_t Bit0:1;
+	uint8_t Bit0 : 1;
 	uint8_t Bit1 : 1;
 	uint8_t Bit2 : 1;
 	uint8_t Bit3 : 1;
@@ -40,7 +40,6 @@ struct PpuStatusFlag
 	uint8_t SpriteZeroHit:1;
 	uint8_t InVBlank:1;
 };
-
 
 
 enum class MirroringMode
@@ -80,32 +79,29 @@ public:
 
 	void Reset();
 
-	bool InVBlank() const { return false; }
-
 	bool ShouldRender();
 	void RenderScanline(int scanline);
 
 	void WriteControlRegister1(uint8_t value); // $2000
 	void WriteMask(uint8_t value); // $2001
-	uint8_t ReadPpuStatus();
-	void WriteCpuAddressRegister(uint8_t value);
+	uint8_t ReadPpuStatus();  // $2002
+	void WriteCpuAddressRegister(uint8_t value); // $2006
+	void WriteScrollRegister(uint8_t value);   //$2005
 	void WriteCpuDataRegister(uint8_t value);   //$2007
 	uint8_t ReadCpuDataRegister();   //$2007
-
-	void WriteScrollRegister(uint8_t value);   //$2005
 
 	void WriteOamAddress(uint8_t value);
 	void WriteOamData(uint8_t value);
 	uint8_t ReadOamData() const;
-
 	void TriggerOamDMA(uint8_t* pData);
 
 	void AddCycles(uint32_t cpuCycles);
 
+	const ppuDisplayBuffer_t& GetDisplayBuffer() const;
+
+	// Logging only
 	uint32_t GetCycles() const;
 	uint32_t GetScanline() const;
-
-	const ppuDisplayBuffer_t& GetDisplayBuffer() const;
 
 private:
 	uint8_t ReadMemory8(uint16_t offset);

@@ -14,7 +14,6 @@ namespace NES { namespace APU {
 
 const uint32_t c_cpuCyclesPerSecond = 1789773;
 
-
 struct PulseWaveParameters
 {
 	union
@@ -29,7 +28,17 @@ struct PulseWaveParameters
 		};
 	} Byte1;
 
-	uint8_t Byte2;
+	union
+	{
+		uint8_t ByteValue;
+		struct
+		{
+			uint8_t SweepShiftCount:3;
+			uint8_t SweepNegateFlag:1;
+			uint8_t SweepDividerPeriod:3;
+			uint8_t SweepEnabledFlag:1;
+		};
+	} Byte2;
 
 	union
 	{
@@ -59,8 +68,6 @@ struct TriangleWaveParameters
 		};
 	} Byte1;
 
-	uint8_t Byte2;
-
 	union
 	{
 		struct
@@ -77,12 +84,79 @@ struct TriangleWaveParameters
 	} Bytes3and4;
 };
 
+class PulseGenerator
+{
+public:
+
+	uint16_t GetValue()
+	{
+		return m_duty[m_sequencerOffset];
+	}
+
+	void AddTicks(uint32_t apuTicks)
+	{
+		if (m_timer > apuTicks)
+		{
+			m_timer -= apuTicks;
+		}
+		else
+		{
+			m_timer = m_timerPeriod - (apuTicks - m_timer);
+			ClockWaveform();
+		}
+
+		// Process sweep.
+		if (m_sweepDividerCounter > apuTicks)
+		{
+			m_sweepDividerCounter -= apuTicks;
+		}
+		else
+		{
+			m_sweepDividerCounter = m_pulseWave1Parameters.Byte2.SweepDividerPeriod + 1 - (apuTicks - m_sweepDividerCounter);
+			ClockSweepUnit();
+		}
+
+		m_lengthCounter -= apuTicks;
+	}
+
+	void ClockWaveform()
+	{
+		
+	}
+
+	void ClockSweepUnit()
+	{
+		if (m_pulseWave1Parameters.Byte2.SweepEnabledFlag)
+		{
+			const uint16_t periodAdjustment = m_pulseWave1Parameters.Bytes3and4.RawPeriod >> m_pulseWave1Parameters.Byte2.SweepShiftCount;
+
+			if (m_pulseWave1Parameters.Byte2.SweepNegateFlag)
+				m_pulseWave1Parameters.Bytes3and4.RawPeriod -= periodAdjustment;
+			else
+				m_pulseWave1Parameters.Bytes3and4.RawPeriod += periodAdjustment;
+		}
+	}
+
+
+private:
+	uint32_t m_timerPeriod = 0;
+	uint32_t m_timer = 0;
+	uint32_t m_lengthCounter = 0;
+	uint8_t m_sequencerOffset = 0;
+	uint16_t m_duty[8];
+
+	uint16_t m_sweepDividerCounter = 0;
+
+	PulseWaveParameters m_pulseWave1Parameters;
+
+};
+
 class Apu : public IApu
 {
 public:
 	Apu();
 
-	virtual void Reset(bool isHardReset) override {}
+	virtual void Reset(bool isHardReset) override;
 	virtual void SetCpu(CPU::Cpu6502* pCpu) override;
 	//virtual void AddCycles(uint32_t cpuCycles) override;
 	virtual void WriteMemory8(uint16_t offset, uint8_t value) override;
@@ -92,6 +166,7 @@ public:
 	void EnableSound(bool isEnabled) override;
 
 private:
+	uint32_t GetElapsedCpuTime() const;
 	void SetPulseWaveParameters(uint16_t offset, uint8_t value, _Inout_ PulseWaveParameters *pPulseWaveParameters);
 	void SetTriangleWaveParameters(uint16_t offset, uint8_t value, _Inout_ TriangleWaveParameters *pPulseWaveParameters);
 
@@ -112,6 +187,7 @@ private:
 	std::unique_ptr<uint8_t[]> m_spAudioData;
 	uint32_t m_cbAudioData = 0;
 	uint32_t m_audioWriteOffset = 0;
+	int64_t m_cpuCyclesBias = 0;
 
 	std::unique_ptr<uint8_t[]> m_spPulse1AudioData;
 	std::unique_ptr<uint8_t[]> m_spPulse2AudioData;
@@ -120,6 +196,8 @@ private:
 	std::shared_ptr<IAudioSource> m_spPulse1AudioSource;
 	std::shared_ptr<IAudioSource> m_spPulse2AudioSource;
 	std::shared_ptr<IAudioSource> m_spTriangleAudioSource;
+
+	PulseGenerator m_pulse1Gen;
 
 	CPU::Cpu6502* m_pCpu;
 };
@@ -134,6 +212,13 @@ Apu::Apu()
 	m_spTriangleAudioSource = m_spAudioDevice->AddAudioSource();
 
 }
+
+void Apu::Reset(bool isHardReset)
+{
+	m_cpuCyclesBias = 0;
+
+}
+
 
 void Apu::SetCpu(CPU::Cpu6502* pCpu)
 {
@@ -202,6 +287,12 @@ inline int GetTriangleFrequencyFromTimerValue(uint32_t timerPeriod)
 	return c_cpuFrequency / (32 * (timerPeriod + 1));
 }
 
+uint32_t Apu::GetElapsedCpuTime() const
+{
+	return static_cast<uint32_t>(m_pCpu->GetElapsedCycles() - m_cpuCyclesBias);
+}
+
+
 void Apu::GenerateTriangleWaveAudioSourceData(const TriangleWaveParameters& params, size_t *pCbAudioData, std::unique_ptr<uint8_t[]> *pAudioDataSmartPtr, IAudioSource* pAudioSource)
 {
 	int timerPeriod = params.Bytes3and4.RawPeriod;
@@ -260,8 +351,13 @@ void Apu::PushAudio()
 		m_audioWriteOffset = 0;
 	}
 
+	const int64_t elapsedCycles = GetElapsedCpuTime();
 	const uint32_t c_cpuCyclesPerSecond = 1789773;
-	uint32_t milliSecondsToPush = (uint32_t)(m_pCpu->GetElapsedCycles() * 1000 / c_cpuCyclesPerSecond);
+
+
+	m_pulse1Gen.AddTicks(static_cast<uint32_t>(elapsedCycles));
+
+	uint32_t milliSecondsToPush = (uint32_t)(elapsedCycles * 1000 / c_cpuCyclesPerSecond);
 	uint32_t samplesToGenerate = milliSecondsToPush * m_spPulse1AudioSource->GetSamplesPerSecond() / 1000;
 
 	uint32_t cbBufferData = milliSecondsToPush * m_spPulse1AudioSource->GetSamplesPerSecond() / 1000 * m_spPulse1AudioSource->GetBytesPerSample();
@@ -314,6 +410,7 @@ void Apu::PushAudio()
 	m_spPulse1AudioSource->SetChannelData(pBufferData, cbBufferData, false /*shouldLoop*/);
 	m_spPulse1AudioSource->Play();
 
+	m_cpuCyclesBias += elapsedCycles;
 	//m_accumulatedCpuCycles = 0;
 }
 

@@ -228,8 +228,8 @@ void CWinSaltyNESDlg::StartLogging()
 	PWSTR pwzLocalAppDataPath = nullptr;
 	SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, NULL, &pwzLocalAppDataPath);
 
-	pwzLocalAppDataPath;
 	std::wstring logFileDirectory = pwzLocalAppDataPath;
+	CoTaskMemFree(pwzLocalAppDataPath);
 	logFileDirectory += L"\\SaltyNES";
 
 	CreateDirectoryW(logFileDirectory.c_str(), nullptr);
