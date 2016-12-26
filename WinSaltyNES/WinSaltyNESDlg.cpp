@@ -18,6 +18,7 @@
 #include <stdexcept>
 
 #include <xaudio2.h>
+#include <Xinput.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -360,8 +361,53 @@ void CWinSaltyNESDlg::StopTimer()
 	//DeleteTimerQueueTimer(NULL, m_frameTimer, NULL);
 }
 
+
+void CWinSaltyNESDlg::DoXInput()
+{
+	XINPUT_STATE state;
+	ZeroMemory(&state, sizeof(XINPUT_STATE));
+
+	// Simply get the state of the controller from XInput.
+	const DWORD dwResult = XInputGetState(0, &state);
+	if (dwResult == ERROR_SUCCESS)
+	{
+		WCHAR wzControllerStatus[128];
+		swprintf_s(wzControllerStatus, _countof(wzControllerStatus), L"%x", state.Gamepad.wButtons);
+		SetDlgItemTextW(IDC_CONTROLLER_OUTPUT, wzControllerStatus);
+
+		struct XInputMapping
+		{
+			DWORD dwXInputValue;
+			NES::ControllerInput nesInputValue;
+		};
+
+		static const XInputMapping c_inputMappings[] = 
+		{
+			{XINPUT_GAMEPAD_DPAD_UP, NES::ControllerInput::Up},
+			{XINPUT_GAMEPAD_DPAD_LEFT, NES::ControllerInput::Left},
+			{XINPUT_GAMEPAD_DPAD_DOWN, NES::ControllerInput::Down},
+			{XINPUT_GAMEPAD_DPAD_RIGHT, NES::ControllerInput::Right},
+			{XINPUT_GAMEPAD_START, NES::ControllerInput::Start},
+			{XINPUT_GAMEPAD_BACK, NES::ControllerInput::Select},
+			{XINPUT_GAMEPAD_A, NES::ControllerInput::B},
+			{XINPUT_GAMEPAD_B, NES::ControllerInput::A},
+		};
+
+		for (auto mapping : c_inputMappings)
+		{
+			m_nes.UseController1().SetInputStatus(mapping.nesInputValue, !!(state.Gamepad.wButtons & mapping.dwXInputValue));
+		}
+	}
+	else
+	{
+		SetDlgItemTextW(IDC_CONTROLLER_OUTPUT, L"No controller");
+	}
+}
+
 void CWinSaltyNESDlg::RenderFrame()
 {
+	DoXInput();
+
 	try
 	{
 		for (;;)
@@ -373,7 +419,6 @@ void CWinSaltyNESDlg::RenderFrame()
 			}
 
 			m_nes.RunCycle();
-			//m_nes.RunCycles(113);
 
 			if (m_nes.GetPpu().ShouldRender())
 			{

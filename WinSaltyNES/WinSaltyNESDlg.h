@@ -56,6 +56,8 @@ private:
 	void PlayRom();
 	void PauseRom();
 
+	void DoXInput();
+
 	void StartLogging();
 
 	bool m_loggingEnabled = false;
