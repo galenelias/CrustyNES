@@ -362,51 +362,12 @@ void CWinSaltyNESDlg::StopTimer()
 }
 
 
-void CWinSaltyNESDlg::DoXInput()
-{
-	XINPUT_STATE state;
-	ZeroMemory(&state, sizeof(XINPUT_STATE));
-
-	// Simply get the state of the controller from XInput.
-	const DWORD dwResult = XInputGetState(0, &state);
-	if (dwResult == ERROR_SUCCESS)
-	{
-		WCHAR wzControllerStatus[128];
-		swprintf_s(wzControllerStatus, _countof(wzControllerStatus), L"%x", state.Gamepad.wButtons);
-		SetDlgItemTextW(IDC_CONTROLLER_OUTPUT, wzControllerStatus);
-
-		struct XInputMapping
-		{
-			DWORD dwXInputValue;
-			NES::ControllerInput nesInputValue;
-		};
-
-		static const XInputMapping c_inputMappings[] = 
-		{
-			{XINPUT_GAMEPAD_DPAD_UP, NES::ControllerInput::Up},
-			{XINPUT_GAMEPAD_DPAD_LEFT, NES::ControllerInput::Left},
-			{XINPUT_GAMEPAD_DPAD_DOWN, NES::ControllerInput::Down},
-			{XINPUT_GAMEPAD_DPAD_RIGHT, NES::ControllerInput::Right},
-			{XINPUT_GAMEPAD_START, NES::ControllerInput::Start},
-			{XINPUT_GAMEPAD_BACK, NES::ControllerInput::Select},
-			{XINPUT_GAMEPAD_A, NES::ControllerInput::B},
-			{XINPUT_GAMEPAD_B, NES::ControllerInput::A},
-		};
-
-		for (auto mapping : c_inputMappings)
-		{
-			m_nes.UseController1().SetInputStatus(mapping.nesInputValue, !!(state.Gamepad.wButtons & mapping.dwXInputValue));
-		}
-	}
-	else
-	{
-		SetDlgItemTextW(IDC_CONTROLLER_OUTPUT, L"No controller");
-	}
-}
-
 void CWinSaltyNESDlg::RenderFrame()
 {
-	DoXInput();
+	if (!m_xinputController1.Poll())
+		SetDlgItemTextW(IDC_CONTROLLER_OUTPUT, L"No controller detected");
+
+	PushAggregateControllerState({m_xinputController1, m_keyboardController}, m_nes.UseController1());
 
 	try
 	{
@@ -489,46 +450,9 @@ void CWinSaltyNESDlg::OnTimer(UINT_PTR nIDEvent)
 }
 
 
-NES::ControllerInput MapVirtualKeyToNesInput(WPARAM vkey)
-{
-	switch (vkey)
-	{
-	case VK_RETURN:
-		return NES::ControllerInput::Start;
-	case VK_SPACE:
-		return NES::ControllerInput::Select;
-	case 'z':
-	case 'Z':
-		return NES::ControllerInput::A;
-	case 'x':
-	case 'X':
-		return NES::ControllerInput::B;
-	case VK_DOWN:
-		return NES::ControllerInput::Down;
-	case VK_UP:
-		return NES::ControllerInput::Up;
-	case VK_LEFT:
-		return NES::ControllerInput::Left;
-	case VK_RIGHT:
-		return NES::ControllerInput::Right;
-	default:
-		return NES::ControllerInput::_Max;
-	}
-}
-
 BOOL CWinSaltyNESDlg::PreTranslateMessage(MSG* pMsg)
 {
-	if (pMsg->message == WM_KEYDOWN || pMsg->message == WM_KEYUP)
-	{
-		// Intercept key presses-
-		NES::ControllerInput nesInput = MapVirtualKeyToNesInput(pMsg->wParam);
-		if (nesInput != NES::ControllerInput::_Max)
-		{
-			m_nes.UseController1().SetInputStatus(nesInput, (pMsg->message == WM_KEYDOWN));
-			return TRUE;
-		}
-	}
-	return FALSE;
+	return m_keyboardController.TranlateWindowsMessage(pMsg->message, pMsg->wParam);
 }
 
 

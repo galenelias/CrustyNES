@@ -11,6 +11,12 @@ void Controller::SetInputStatus(ControllerInput input, bool isPressed)
 }
 
 
+bool Controller::GetInputStatus(ControllerInput input) const
+{
+	return !!m_inputs[static_cast<size_t>(input)];
+}
+
+
 void Controller::WriteData(uint8_t value)
 {
 	m_strobeOn = (value & 0x1) != 0;

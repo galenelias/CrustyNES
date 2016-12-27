@@ -10,6 +10,8 @@
 #include "NES/NES.h"
 #include "Util/MovingAverage.h"
 #include "Util/Stopwatch.h"
+#include "UserController.h"
+
 #include <xaudio2.h>
 
 // CWinSaltyNESDlg dialog
@@ -56,8 +58,6 @@ private:
 	void PlayRom();
 	void PauseRom();
 
-	void DoXInput();
-
 	void StartLogging();
 
 	bool m_loggingEnabled = false;
@@ -79,6 +79,9 @@ private:
 	PPU::RenderOptions m_renderOptions;
 	bool m_isSoundEnabled = true;
 	bool m_isDebugRenderingEnabled = false;
+
+	Win32KeyboardController m_keyboardController;
+	XInputGamepadController m_xinputController1;
 
 	MovingAverage<LONGLONG, 30> m_fpsAverage;
 	Stopwatch m_frameStopwatch;

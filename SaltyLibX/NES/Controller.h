@@ -7,7 +7,8 @@ namespace NES
 
 enum class ControllerInput
 {
-	A = 0,
+	_Min = 0,
+	A = _Min,
 	B = 1,
 	Select = 2,
 	Start = 3,
@@ -22,6 +23,7 @@ class Controller
 {
 public:
 	void SetInputStatus(ControllerInput input, bool isPressed);
+	bool GetInputStatus(ControllerInput input) const;
 
 	void WriteData(uint8_t value);
 	uint8_t ReadData();
