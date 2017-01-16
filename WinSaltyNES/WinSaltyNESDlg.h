@@ -4,15 +4,28 @@
 
 #pragma once
 
-#include <sstream>
-#include <fstream>
-
 #include "NES/NES.h"
 #include "Util/MovingAverage.h"
 #include "Util/Stopwatch.h"
 #include "UserController.h"
 
+#include "D3D11Renderer.h"
+
+#include <sstream>
+#include <fstream>
 #include <xaudio2.h>
+
+enum class ERenderMode
+{
+	Win32,
+	DirectX,
+};
+
+enum class ERunMode
+{
+	Timer,
+	FullThrottle,
+};
 
 // CWinSaltyNESDlg dialog
 class CWinSaltyNESDlg : public CDialogEx
@@ -86,6 +99,12 @@ private:
 	MovingAverage<LONGLONG, 30> m_fpsAverage;
 	Stopwatch m_frameStopwatch;
 	HANDLE m_frameTimer = INVALID_HANDLE_VALUE;
+
+	D3D11Renderer m_d3dRenderer;
+	void TestRender();
+
+	ERenderMode m_eRenderMode = ERenderMode::DirectX;
+	ERunMode m_eRunMode = ERunMode::Timer;
 
 public:
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);

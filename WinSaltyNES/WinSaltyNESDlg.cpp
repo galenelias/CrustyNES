@@ -26,7 +26,11 @@
 
 #define WM_RENDERFRAME (WM_APP + 1)
 
-const DWORD TIMER_REDRAW = 0;
+enum
+{
+	TIMER_REDRAW,
+	TIMER_TESTRENDER
+};
 
 class CWin32ReadOnlyFile : public IReadableFile
 {
@@ -161,6 +165,9 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 
 	// Set controls initial states
 	SetDlgItemTextW(IDC_EDIT_WAVE_HZ, L"200");
+
+	m_d3dRenderer.Initialize(GetSafeHwnd());
+	//SetTimer(TIMER_TESTRENDER, 0, nullptr);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -369,6 +376,7 @@ void CWinSaltyNESDlg::RenderFrame()
 
 	PushAggregateControllerState({m_xinputController1, m_keyboardController}, m_nes.UseController1());
 
+
 	try
 	{
 		for (;;)
@@ -384,11 +392,19 @@ void CWinSaltyNESDlg::RenderFrame()
 			if (m_nes.GetPpu().ShouldRender())
 			{
 				m_nes.GetApu().PushAudio();
-				CClientDC clientDC(this);
-				PaintNESFrame(&clientDC);
+
+				if (m_eRenderMode == ERenderMode::DirectX)
+				{
+					m_d3dRenderer.Render(m_nes.GetPpu().GetDisplayBuffer());
+				}
+				else
+				{
+					CClientDC clientDC(this);
+					PaintNESFrame(&clientDC);
+				}
+
 				break;
 			}
-
 		}
 	}
 	catch (std::exception& e)
@@ -441,9 +457,12 @@ void CWinSaltyNESDlg::OnTimer(UINT_PTR nIDEvent)
 {
 	switch (nIDEvent)
 	{
-	case TIMER_REDRAW:
-		RenderFrame();
-		break;
+		case TIMER_REDRAW:
+			RenderFrame();
+			break;
+		case TIMER_TESTRENDER:
+			TestRender();
+			break;
 	}
 
 	CDialogEx::OnTimer(nIDEvent);
@@ -515,8 +534,10 @@ void CWinSaltyNESDlg::PlayRom()
 	m_frameStopwatch.Start();
 	//CreateTimerQueueTimer(&m_frameTimer, NULL /*default timer queue*/, FrameTimerProc, this, 1000/60, 1000/60, WT_EXECUTEINTIMERTHREAD /*flags*/);
 
-	SetTimer(TIMER_REDRAW, 0, nullptr);
-	//RenderNextFrame(0,0); // Run as fast as humanly possible for performance measurement reasons
+	if (m_eRunMode == ERunMode::Timer)
+		SetTimer(TIMER_REDRAW, 0, nullptr);
+	else // if (m_eRunMode == ERunMode::FullThrottle)
+		RenderNextFrame(0,0); // Run as fast as humanly possible for performance measurement reasons
 }
 
 void CWinSaltyNESDlg::PauseRom()
@@ -563,4 +584,10 @@ void CWinSaltyNESDlg::OnNesReset()
 void CWinSaltyNESDlg::OnFileExit()
 {
 	this->OnOK();
+}
+
+
+void CWinSaltyNESDlg::TestRender()
+{
+	m_d3dRenderer.Render(m_nes.GetPpu().GetDisplayBuffer());
 }

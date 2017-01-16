@@ -170,8 +170,7 @@ void Sample3DSceneRenderer::Render()
 	const int c_height = 256;
 	uint32_t* pPixels = reinterpret_cast<uint32_t*>(mappedResource.pData);
 
-	PPU::ppuDisplayBuffer_t screenPixels;
-	m_nes.GetPpu().RenderToBuffer(screenPixels, PPU::RenderOptions());
+	const PPU::ppuDisplayBuffer_t& screenPixels = m_nes.GetPpu().GetDisplayBuffer();
 
 	for (int iRow = 0; iRow != PPU::c_displayHeight; ++iRow)
 	{

@@ -36,6 +36,9 @@
     <ClInclude Include="UserController.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="D3D11Renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinSaltyNES.cpp">
@@ -50,6 +53,9 @@
     <ClCompile Include="UserController.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="D3D11Renderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="WinSaltyNES.rc">
@@ -60,6 +66,7 @@
     <None Include="res\WinSaltyNES.rc2">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\WinSaltyNES.ico">

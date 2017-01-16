@@ -11,7 +11,7 @@
 *.VC.db
 
 # XAML Generated Files
-Generated Files/
+**/Generated Files/
 
 # Build results
 [Dd]ebug/
