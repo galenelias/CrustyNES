@@ -10,6 +10,7 @@ public:
 	static Duration FromMicroseconds(int64_t value);
 
 	int64_t GetMilliseconds() const;
+	int64_t GetMicroseconds() const;
 
 private:
 	int64_t m_durationInMicroseconds;

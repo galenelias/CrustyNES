@@ -103,8 +103,9 @@ private:
 	D3D11Renderer m_d3dRenderer;
 	void TestRender();
 
-	ERenderMode m_eRenderMode = ERenderMode::DirectX;
-	ERunMode m_eRunMode = ERunMode::Timer;
+	ERenderMode m_eRenderMode = ERenderMode::DirectX;	// Win32, DirectX,
+	ERunMode m_eRunMode = ERunMode::FullThrottle; // Timer, FullThrottle,
+
 
 public:
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
@@ -117,4 +118,5 @@ public:
 	afx_msg void OnDebugDebugrendering();
 	afx_msg void OnNesReset();
 	afx_msg void OnFileExit();
+	afx_msg void OnSize(UINT nType, int cx, int cy);
 };

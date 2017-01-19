@@ -153,6 +153,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Core.h" />
     <ClInclude Include="NES\APU.h" />
     <ClInclude Include="NES\APU_blargg.h" />
     <ClInclude Include="NES\Controller.h" />

@@ -26,13 +26,15 @@ public:
 	~D3D11Renderer();
 
 	bool Initialize(HWND hwnd);
+	bool Resize();
 
-	void Render(const PPU::ppuDisplayBuffer_t& screenPixels);
-
+	bool Render(const PPU::ppuDisplayBuffer_t& screenPixels);
 
 private:
 	bool CreateSwapChain(HWND hwnd);
 	bool CreateNesTexture();
+
+	HWND m_hwnd = NULL;
 
 	Microsoft::WRL::ComPtr<ID3D11Device> m_spDevice;
 	Microsoft::WRL::ComPtr<IDXGISwapChain> m_spSwapChain;
@@ -43,6 +45,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11SamplerState>	m_nesSamplerState;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>	m_nesTextureResource;
 	
+	int m_textureWidth = 0;
+	int m_textureHeight = 0;
+
 	std::unique_ptr<DirectX::SpriteBatch> m_spSpriteBatch;
 
 };

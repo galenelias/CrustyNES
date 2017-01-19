@@ -8,6 +8,11 @@ Duration Duration::FromMicroseconds(LONGLONG value)
 	return duration;
 }
 
+LONGLONG Duration::GetMicroseconds() const
+{
+	return m_durationInMicroseconds;
+}
+
 LONGLONG Duration::GetMilliseconds() const
 {
 	return m_durationInMicroseconds / 1000;

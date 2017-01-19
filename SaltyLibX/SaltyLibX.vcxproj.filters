@@ -120,6 +120,9 @@
     <ClInclude Include="Util\IAudioDevice.h">
       <Filter>Header Files\Util</Filter>
     </ClInclude>
+    <ClInclude Include="Core.h">
+      <Filter>Header Files\Util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">

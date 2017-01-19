@@ -32,6 +32,19 @@ enum
 	TIMER_TESTRENDER
 };
 
+void ValidateBool(bool result)
+{
+	if (!result)
+		MessageBox(NULL, L"Failure", L"Error", MB_OK);
+}
+
+void ValidateHr(HRESULT hr)
+{
+	if (FAILED(hr))
+		MessageBox(NULL, L"Failure", L"Error", MB_OK);
+}
+
+
 class CWin32ReadOnlyFile : public IReadableFile
 {
 public:
@@ -126,6 +139,7 @@ BEGIN_MESSAGE_MAP(CWinSaltyNESDlg, CDialogEx)
 	ON_COMMAND(ID_DEBUG_DEBUGRENDERING, &CWinSaltyNESDlg::OnDebugDebugrendering)
 	ON_COMMAND(ID_NES_RESET, &CWinSaltyNESDlg::OnNesReset)
 	ON_COMMAND(ID_FILE_EXIT, &CWinSaltyNESDlg::OnFileExit)
+	ON_WM_SIZE()
 END_MESSAGE_MAP()
 
 
@@ -163,10 +177,7 @@ BOOL CWinSaltyNESDlg::OnInitDialog()
 	//OpenRomFile(L"C:\\Users\\Galen\\OneDrive\\Documents\\NES_Rom_Backups\\LegendOfZelda.nes");
 	SetupRenderBitmap();
 
-	// Set controls initial states
-	SetDlgItemTextW(IDC_EDIT_WAVE_HZ, L"200");
-
-	m_d3dRenderer.Initialize(GetSafeHwnd());
+	ValidateBool(m_d3dRenderer.Initialize(GetSafeHwnd()));
 	//SetTimer(TIMER_TESTRENDER, 0, nullptr);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
@@ -338,14 +349,6 @@ void CWinSaltyNESDlg::UpdateRuntimeStats()
 {
 	if (m_loggingEnabled)
 		m_debugFileOutput.flush();
-
-	//auto cyclesString = std::to_wstring(m_nes.GetCyclesRanSoFar());
-	//SetDlgItemTextW(IDC_CYCLES_DISPLAY, cyclesString.c_str());
-
-	wchar_t wzProgramCounter[32];
-	swprintf_s(wzProgramCounter, _countof(wzProgramCounter),L"%04hX", m_nes.GetCpu().GetProgramCounter());
-	SetDlgItemTextW(IDC_PROGRAM_COUNTER, wzProgramCounter);
-
 }
 
 
@@ -371,11 +374,8 @@ void CWinSaltyNESDlg::StopTimer()
 
 void CWinSaltyNESDlg::RenderFrame()
 {
-	if (!m_xinputController1.Poll())
-		SetDlgItemTextW(IDC_CONTROLLER_OUTPUT, L"No controller detected");
-
+	m_xinputController1.Poll();
 	PushAggregateControllerState({m_xinputController1, m_keyboardController}, m_nes.UseController1());
-
 
 	try
 	{
@@ -395,7 +395,7 @@ void CWinSaltyNESDlg::RenderFrame()
 
 				if (m_eRenderMode == ERenderMode::DirectX)
 				{
-					m_d3dRenderer.Render(m_nes.GetPpu().GetDisplayBuffer());
+					ValidateBool(m_d3dRenderer.Render(m_nes.GetPpu().GetDisplayBuffer()));
 				}
 				else
 				{
@@ -427,10 +427,11 @@ void CWinSaltyNESDlg::RenderFrame()
 
 }
 
+
 void CWinSaltyNESDlg::IncrementFrameCount(bool shouldUpdateFpsCounter)
 {
 	Duration frameTime = m_frameStopwatch.Lap();
-	int averageFrameTime = (int)m_fpsAverage.AddValue(frameTime.GetMilliseconds());
+	int averageFrameTime = (int)m_fpsAverage.AddValue(frameTime.GetMicroseconds());
 
 	static int s_counter = 0;
 
@@ -440,11 +441,10 @@ void CWinSaltyNESDlg::IncrementFrameCount(bool shouldUpdateFpsCounter)
 			averageFrameTime = 1;
 
 		WCHAR wzAverageFps[128];
-		swprintf_s(wzAverageFps, _countof(wzAverageFps), L"%d", 1000 / averageFrameTime);
-		SetDlgItemTextW(IDC_STATUSEDIT, wzAverageFps);
+		swprintf_s(wzAverageFps, _countof(wzAverageFps), L"WinSaltyNES - (%d fps)", 1000000 / averageFrameTime);
+		SetWindowText(wzAverageFps);
 	}
 }
-
 
 
 BOOL CWinSaltyNESDlg::OnEraseBkgnd(CDC* pDC)
@@ -590,4 +590,13 @@ void CWinSaltyNESDlg::OnFileExit()
 void CWinSaltyNESDlg::TestRender()
 {
 	m_d3dRenderer.Render(m_nes.GetPpu().GetDisplayBuffer());
+}
+
+
+void CWinSaltyNESDlg::OnSize(UINT nType, int cx, int cy)
+{
+	CDialogEx::OnSize(nType, cx, cy);
+
+	if (m_eRenderMode == ERenderMode::DirectX)
+		m_d3dRenderer.Resize();
 }
