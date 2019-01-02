@@ -441,7 +441,7 @@ void CCrustyWin32Dlg::IncrementFrameCount(bool shouldUpdateFpsCounter)
 			averageFrameTime = 1;
 
 		WCHAR wzAverageFps[128];
-		swprintf_s(wzAverageFps, _countof(wzAverageFps), L"CrustyWin32 - (%d fps)", 1000000 / averageFrameTime);
+		swprintf_s(wzAverageFps, _countof(wzAverageFps), L"CrustyNES - (%d fps)", 1000000 / averageFrameTime);
 		SetWindowText(wzAverageFps);
 	}
 }
