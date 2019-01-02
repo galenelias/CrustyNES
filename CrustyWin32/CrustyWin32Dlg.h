@@ -104,7 +104,7 @@ private:
 	void TestRender();
 
 	ERenderMode m_eRenderMode = ERenderMode::DirectX;	// Win32, DirectX,
-	ERunMode m_eRunMode = ERunMode::FullThrottle; // Timer, FullThrottle,
+	ERunMode m_eRunMode = ERunMode::Timer; // Timer, FullThrottle,
 
 
 public:
